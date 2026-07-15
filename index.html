@@ -1,1 +1,218 @@
-
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LETU WORK SPACE</title>
+  <script src="https://jsdelivr.net"></script>
+  <style>
+    :root {
+      --bg-sea: #0a1128;
+      --card-sea: #1c2541;
+      --accent-neon: #00b4d8;
+      --text-white: #f8f9fa;
+      --text-gray: #9ca3af;
+      --input-bg: #0b0c10;
+      --border-sea: #1f4068;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background-color: var(--bg-sea);
+      color: var(--text-white);
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+    .project-tabs {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      background: var(--card-sea);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border-sea);
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-gray);
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+    .tab-btn:hover {
+      color: var(--text-white);
+    }
+    .tab-btn.active {
+      background: var(--accent-neon);
+      color: var(--bg-sea);
+      box-shadow: 0 0 10px rgba(0, 180, 216, 0.4);
+    }
+    .auth-container {
+      background: var(--card-sea);
+      padding: 40px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 400px;
+      border: 1px solid var(--border-sea);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      text-align: center;
+    }
+    .auth-title {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 30px;
+      color: var(--text-white);
+    }
+    .auth-title span {
+      color: var(--accent-neon);
+    }
+    .input-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-gray);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .input-field {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border-sea);
+      padding: 12px 16px;
+      border-radius: 8px;
+      color: var(--text-white);
+      font-size: 15px;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+    .input-field:focus {
+      border-color: var(--accent-neon);
+      box-shadow: 0 0 8px rgba(0, 180, 216, 0.2);
+    }
+    .login-btn {
+      width: 100%;
+      background: var(--accent-neon);
+      color: var(--bg-sea);
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: transform 0.1s ease, background 0.3s ease;
+    }
+    .login-btn:hover {
+      background: #0096c7;
+    }
+    .login-btn:active {
+      transform: scale(0.98);
+    }
+    .error-msg {
+      color: #ff4d4d;
+      font-size: 14px;
+      margin-top: 15px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="project-tabs">
+    <button class="tab-btn active" onclick="switchProject('breaks')">Перерывы</button>
+    <button class="tab-btn" onclick="switchProject('id')">ИД</button>
+  </div>
+  <div class="auth-container" id="authBox">
+    <h2 class="auth-title">LETU WORK SPACE<br><span id="projectSubTitle">Авторизация: Перерывы</span></h2>
+    <div class="input-group">
+      <label for="username">Login:</label>
+      <input type="text" id="username" class="input-field" placeholder="Введите ваш ID" autocomplete="off">
+    </div>
+    <div class="input-group">
+      <label for="password">Password:</label>
+      <input type="password" id="password" class="input-field" placeholder="••••••••">
+    </div>
+    <button class="login-btn" onclick="handleLogin()">Войти Workspace</button>
+    <div class="error-msg" id="errorBlock"></div>
+  </div>
+  <script>
+    const supabaseUrl = 'https://rveladeasrfruhcInfyo.supabase.co';
+    const supabaseKey = 'sb_publishable_0pgZg-M-tkZ_De75fQDnVQ__Ssf_Fke';
+    const supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
+    let currentProject = 'breaks'; 
+    function switchProject(projectType) {
+      currentProject = projectType;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      const subTitle = document.getElementById('projectSubTitle');
+      if (projectType === 'breaks') {
+        subTitle.innerText = 'Авторизация: Перерывы';
+      } else {
+        subTitle.innerText = 'Авторизация: Проект ИД';
+      }
+      document.getElementById('errorBlock').style.display = 'none';
+    }
+    document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
+    document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
+    async function handleLogin() {
+      const errorBlock = document.getElementById('errorBlock');
+      errorBlock.style.display = 'none';
+      const inputUser = document.getElementById('username').value.trim().toLowerCase();
+      const inputPass = document.getElementById('password').value.trim();
+      if (!inputUser || !inputPass) {
+        showError("Заполните все поля логина и пароля!");
+        return;
+      }
+      try {
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('username, password, role')
+          .eq('username', inputUser)
+          .maybeSingle();
+        if (error) throw error;
+        if (!user || user.password !== inputPass) {
+          showError("Неверный логин или пароль!");
+          return;
+        }
+        console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
+        document.getElementById('authBox').style.display = 'none';
+        if (currentProject === 'breaks') {
+          startBreaksProject(user);
+        } else {
+          startIdProject(user);
+        }
+      } catch (err) {
+        showError("Ошибка подключения к базе: " + err.message);
+      }
+    }
+    function showError(text) {
+      const errorBlock = document.getElementById('errorBlock');
+      errorBlock.innerText = text;
+      errorBlock.style.display = 'block';
+    }
+    function startBreaksProject(user) {
+      document.body.innerHTML += `<div style="text-align:center;font-size:24px;margin-top:50px;width:100%;">🚀 Проект [Перерывы] успешно запущен для ${user.username} (${user.role})</div>`;
+    }
+    function startIdProject(user) {
+      document.body.innerHTML += `<div style="text-align:center;font-size:24px;margin-top:50px;width:100%;color:var(--accent-neon);">🔍 Проект [ИД] успешно запущен для ${user.username} (${user.role})</div>`;
+    }
+  </script>
+</body>
+</html>
