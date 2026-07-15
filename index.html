@@ -190,6 +190,9 @@
         if (user.role === 'admin') {
           document.getElementById('admUserId').innerText = user.username;
           document.getElementById('adminDashboard').style.display = 'flex';
+          
+          // Принудительно запускаем монитор Линии на старте
+          fetchAndRenderAdminMonitor('HL');
           return;
         }
 
@@ -366,6 +369,9 @@
       else if (tabType === 'LIVE') title.innerText = 'ЧАТ LIVETEX';
       else title.innerText = 'ЧАТ LIVETEX НОЧЬ';
       console.log(`Админ переключился на просмотр смены: ${tabType}`);
+      
+      // АКТИВАЦИЯ: Запускаем живую подгрузку строк для выбранной вкладки!
+      fetchAndRenderAdminMonitor(tabType);
     }
     // Функция массового импорта слотов времени для админа
     async function handleMassImportSlots() {
@@ -607,6 +613,103 @@
       } catch (err) {
         alert("Не удалось зафиксировать бронь в логе: " + err.message);
       }
+    }
+    // Функция живой загрузки данных в таблицу мониторинга админа
+    async function fetchAndRenderAdminMonitor(channel) {
+      const tbody = document.getElementById('monitoringTableBody');
+      if (!tbody) return;
+      
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">Синхронизация данных с Supabase...</td></tr>';
+
+      try {
+        // Запрашиваем из лога bookings ВСЕ активные брони для выбранного канала
+        const { data: bookings, error } = await db
+          .from('bookings')
+          .select('id, slot_time, username, status')
+          .eq('channel', channel);
+
+        if (error) throw error;
+        tbody.innerHTML = '';
+
+        if (!bookings || bookings.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">В данном канале пока нет забронированных перерывов</td></tr>';
+          return;
+        }
+
+        // Группируем бронирования по операторам (чтобы у каждого была одна строка со списком тегов)
+        const operatorGroups = {};
+        bookings.forEach(b => {
+          if (!operatorGroups[b.username]) {
+            operatorGroups[b.username] = [];
+          }
+          operatorGroups[b.username].push(b);
+        });
+
+        // Бежим по сгруппированным операторам и создаем строки таблицы
+        for (const operatorId in operatorGroups) {
+          const userBookings = operatorGroups[operatorId];
+          
+          // Сортируем интервалы оператора по времени, чтобы они шли по хронологии
+          userBookings.sort((a, b) => a.slot_time.localeCompare(b.slot_time));
+
+          const tr = document.createElement('tr');
+          tr.className = 'mon-row';
+
+          // Вычисляем общее время перерывов (пока просто выводим количество слотов, позже привяжем математику минут)
+          let totalSlotsCount = userBookings.length;
+
+          // Левая ячейка: Имя/ID оператора и кнопка полного сброса
+          let opCell = document.createElement('td');
+          opCell.className = 'mon-cell-operator';
+          opCell.innerHTML = `
+            <div class="operator-id">
+              <button class="reset-row-btn" title="Сбросить оператора целиком" onclick="handleResetOperator('${operatorId}', '${channel}')">✕</button>
+              ${operatorId}
+            </div>
+            <div class="operator-time-info">⏱ Занято слотов: ${totalSlotsCount}</div>
+          `;
+          tr.appendChild(opCell);
+
+          // Правая ячейка: Контейнер с неоновыми тегами интервалов
+          let slotsCell = document.createElement('td');
+          slotsCell.className = 'mon-cell-slots';
+
+          userBookings.forEach(b => {
+            const tag = document.createElement('div');
+            tag.className = 'adm-int-tag';
+            // При клике на конкретный тег админ сможет принудительно удалить именно этот перерыв
+            tag.innerHTML = `${b.slot_time} <span style="margin-left:5px; color:#ff4d4d; font-weight:700;">✕</span>`;
+            tag.onclick = () => handleCancelSingleBooking(b.id, channel);
+            slotsCell.appendChild(tag);
+          });
+
+          tr.appendChild(slotsCell);
+          tbody.appendChild(tr);
+        }
+
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:30px; color:#ff4d4d;">Ошибка мониторинга: ${err.message}</td></tr>`;
+      }
+    }
+
+    // Функция удаления одного конкретного перерыва админом по клику на тег
+    async function handleCancelSingleBooking(bookingId, channel) {
+      if (!confirm("Принудительно удалить этот временной слот из лога смены?")) return;
+      try {
+        const { error } = await db.from('bookings').delete().eq('id', bookingId);
+        if (error) throw error;
+        await fetchAndRenderAdminMonitor(channel); // Обновляем экран админа
+      } catch (err) { alert("Не удалось удалить слот: " + err.message); }
+    }
+
+    // Функция полного сброса всех перерывов конкретного оператора (нажатие на крестик у ID)
+    async function handleResetOperator(username, channel) {
+      if (!confirm(`Очистить все перерывы для оператора [${username}] в текущем канале?`)) return;
+      try {
+        const { error } = await db.from('bookings').delete().eq('username', username).eq('channel', channel);
+        if (error) throw error;
+        await fetchAndRenderAdminMonitor(channel); // Обновляем экран админа
+      } catch (err) { alert("Не удалось сбросить оператора: " + err.message); }
     }
 
   </script>
