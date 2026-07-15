@@ -133,6 +133,28 @@
 
     </div>
   </div>
+      <!-- ВОССТАНОВЛЕННЫЙ БЛОК МОНИТОРИНГА АДМИНА -->
+    <div class="monitoring-container" style="margin-top: 15px;">
+      <h3 class="monitoring-title">МОНИТОР СМЕНЫ: <span id="currentMonitorTitle">ГОРЯЧАЯ ЛИНИЯ</span></h3>
+      <table class="mon-table">
+        <thead>
+          <tr>
+            <th style="text-align: left; padding: 10px 14px;">Оператор</th>
+            <th style="text-align: left; padding: 10px 14px;">Забронированные интервалы (Клик для удаления слота)</th>
+          </tr>
+        </thead>
+        <tbody id="monitoringTableBody">
+          <!-- Сюда JavaScript вживую подтянет операторов из Supabase -->
+          <tr>
+            <td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">
+              Синхронизация данных с Supabase...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div> <!-- Этот тег намертво закрывает весь блок adminDashboard -->
 
   <script>
     if (!window.supabaseInstance) {
