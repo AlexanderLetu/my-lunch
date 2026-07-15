@@ -32,6 +32,80 @@
     .login-btn:hover { background: #0096c7; }
     .login-btn:active { transform: scale(0.98); }
     .error-msg { color: #ff4d4d; font-size: 14px; margin-top: 15px; display: none; }
+        /* Контейнер выбора каналов */
+    .channel-container {
+      background: var(--card-sea);
+      padding: 40px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 440px;
+      border: 1px solid var(--border-sea);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    .channel-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      margin-bottom: 30px;
+      color: var(--text-white);
+      text-transform: uppercase;
+    }
+
+    /* Стильные неоновые кнопки каналов */
+    .channel-btn {
+      width: 100%;
+      background: var(--input-bg);
+      color: var(--text-white);
+      border: 2px solid var(--border-sea);
+      padding: 16px;
+      font-size: 15px;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 16px;
+      letter-spacing: 0.5px;
+      transition: all 0.3s ease;
+    }
+
+    .channel-btn:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Индивидуальная неоновая подсветка для каждой кнопки при наведении */
+    .btn-hl:hover {
+      border-color: #ff007f;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+      color: #ff007f;
+      transform: translateY(-2px);
+    }
+
+    .btn-live:hover {
+      border-color: var(--accent-neon);
+      box-shadow: 0 0 15px rgba(0, 180, 216, 0.4);
+      color: var(--accent-neon);
+      transform: translateY(-2px);
+    }
+
+    .btn-night:hover {
+      border-color: #9d4edd;
+      box-shadow: 0 0 15px rgba(157, 78, 221, 0.4);
+      color: #9d4edd;
+      transform: translateY(-2px);
+    }
+
+    .channel-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* Анимация плавного появления окон */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
   </style>
 </head>
 <body>
@@ -52,7 +126,22 @@
     <button class="login-btn" onclick="handleLogin()">Войти Workspace</button>
     <div class="error-msg" id="errorBlock"></div>
   </div>
-
+    <!-- Окно выбора канала связи (скрыто по умолчанию) -->
+  <div class="channel-container" id="channelBox" style="display: none;">
+    <h2 class="channel-title">ВЫБЕРИТЕ КАНАЛ СВЯЗИ</h2>
+    
+    <button class="channel-btn btn-hl" onclick="selectChannel('HL')">
+      ГОРЯЧАЯ ЛИНИЯ
+    </button>
+    
+    <button class="channel-btn btn-live" onclick="selectChannel('LIVE')">
+      ЧАТ LIVETEX
+    </button>
+    
+    <button class="channel-btn btn-night" onclick="selectChannel('NIGHT')">
+      ЧАТ LIVETEX НОЧЬ
+    </button>
+  </div>
   <script>
     // Изолированная инициализация без конфликтов объявления переменных
     if (!window.supabaseInstance) {
@@ -107,8 +196,25 @@
         console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
         
         // Магия изменения фона: делаем экран полностью черным
-        document.body.style.backgroundColor = '#000000';
-        document.body.innerHTML = ''; 
+            // Запуск проекта Перерывов после успешного входа
+        function startBreaksProject(user) {
+          window.currentUser = user; 
+          document.body.style.backgroundColor = '#040814'; 
+          document.getElementById('authBox').style.display = 'none';
+          document.getElementById('channelBox').style.display = 'block';
+        }
+    
+        // Функция, которая срабатывает при выборе конкретного канала
+        function selectChannel(channelType) {
+          console.log(`Пользователь ${window.currentUser.username} выбрал канал: ${channelType}`);
+          document.getElementById('channelBox').style.display = 'none';
+          renderTimeGrid(channelType);
+        }
+    
+        // Заглушка для будущей сетки времени
+        function renderTimeGrid(channel) {
+          document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:var(--accent-neon);width:100%;">⏳ Здесь будет генерироваться сетка времени для канала: [${channel}]</div>`;
+        }
 
         // Выводим подтверждение на чистом черном фоне
         if (currentProject === 'breaks') { 
