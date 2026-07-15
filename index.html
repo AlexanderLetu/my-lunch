@@ -700,17 +700,19 @@
       tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">Синхронизация данных с Supabase...</td></tr>';
 
       try {
-        // Запрашиваем из лога bookings ВСЕ активные брони для выбранного канала
-        const { data: bookings, error } = await db
+        // ПРОВЕРКА НА АКТИВНЫЙ ТАЙМЕР: Проверяем, не сидит ли юзер на перерыве прямо сейчас
+        const { data: checkActive, error: activeErr } = await db
           .from('bookings')
-          .select('id, slot_time, username, status')
-          .eq('channel', channel);
+          .select('slot_time')
+          .eq('username', window.currentUser.username)
+          .eq('status', 'ACTIVE')
+          .maybeSingle();
 
-        if (error) throw error;
-        tbody.innerHTML = '';
-
-        if (!bookings || bookings.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">В данном канале пока нет забронированных перерывов</td></tr>';
+        if (!activeErr && checkActive) {
+          // Если нашли активный статус — намертво разворачиваем экран таймера обратно!
+          activeActionSlotTime = checkActive.slot_time;
+          activeActionChannel = channel;
+          startCountdownTimerLogic(checkActive.slot_time);
           return;
         }
 
@@ -840,11 +842,114 @@
       }
     }
     
-    // Заглушка для будущей кнопки "ДА" (запуск таймера — напишем на следующем этапе)
-    function processOperatorConfirmBreak() {
+    // Глобальная переменная для хранения работающего интервала таймера
+    let countdownIntervalId = null;
+
+    // Кнопка "ДА" — запускает режим активного перерыва оператора
+    async function processOperatorConfirmBreak() {
       closeCancelBreakModal();
-      alert("На следующем этапе здесь запустится блокировка экрана и обратный отсчет!");
+      
+      try {
+        // 1. Меняем статус этой брони в Supabase на ACTIVE (вышел на перерыв)
+        const { error } = await db
+          .from('bookings')
+          .update({ status: 'ACTIVE' })
+          .eq('slot_time', activeActionSlotTime)
+          .eq('username', window.currentUser.username)
+          .eq('channel', activeActionChannel);
+
+        if (error) throw error;
+
+        // 2. Запускаем локальный обратный отсчет времени для этого слота
+        startCountdownTimerLogic(activeActionSlotTime);
+
+      } catch (err) {
+        alert("Не удалось запустить перерыв: " + err.message);
+      }
     }
+
+    // Функция расчета минут и запуска секундного таймера на экране
+    function startCountdownTimerLogic(slotTime) {
+      // Парсим время окончания слота (например, из "10:10-10:20" вытаскиваем "10:20")
+      const endTimeString = slotTime.split('-')[1]; 
+      const [endHours, endMinutes] = endTimeString.split(':').map(Number);
+
+      const overlay = document.getElementById('activeBreakOverlay');
+      const display = document.getElementById('countdownTimerDisplay');
+      
+      // Показываем полноэкранный темный блок, блокируя интерфейс
+      overlay.style.display = 'flex';
+
+      // Очищаем старый таймер, если он случайно работал
+      if (countdownIntervalId) clearInterval(countdownIntervalId);
+
+      // Запускаем ежесекундный цикл пересчета внутри браузера (0 запросов к базе!)
+      countdownIntervalId = setInterval(() => {
+        const now = new Date();
+        
+        // Создаем объект целевого времени окончания перерыва (сегодня)
+        const targetTime = new Date();
+        targetTime.setHours(endHours, endMinutes, 0, 0);
+
+        // Считаем разницу в миллисекундах между "сейчас" и "концом перерыва"
+        const diff = targetTime - now;
+
+        // Если время вышло — автоматически завершаем перерыв
+        if (diff <= 0) {
+          clearInterval(countdownIntervalId);
+          autoCompleteActiveBreak();
+          return;
+        }
+
+        // Переводим миллисекунды в привычные Минуты и Секунды
+        const minutes = Math.floor(diff / 1000 / 60);
+        const seconds = Math.floor((diff / 1000) % 60);
+
+        // Красиво форматируем числа, чтобы всегда было две цифры (например, "09:05")
+        const displayMin = String(minutes).padStart(2, '0');
+        const displaySec = String(seconds).padStart(2, '0');
+
+        display.innerText = `${displayMin}:${displaySec}`;
+      }, 1000);
+    }
+
+    // Функция, которая срабатывает, когда таймер дошел до 00:00
+    async function autoCompleteActiveBreak() {
+      if (countdownIntervalId) clearInterval(countdownIntervalId);
+      document.getElementById('activeBreakOverlay').style.display = 'none';
+      
+      try {
+        // Меняем статус в базе на COMPLETED (перерыв успешно завершен)
+        await db
+          .from('bookings')
+          .update({ status: 'COMPLETED' })
+          .eq('slot_time', activeActionSlotTime)
+          .eq('username', window.currentUser.username);
+
+        alert("⏰ Время вашего перерыва истекло! Возвращайтесь к работе.");
+        await renderTimeGrid(activeActionChannel); // Перерисовываем сетку
+      } catch (err) { console.error(err); }
+    }
+
+    // Функция досрочного завершения перерыва по кнопке "ЗАВЕРШИТЬ"
+    async function handleEarlyCompleteBreak() {
+      if (!confirm("Вы действительно хотите завершить перерыв досрочно и вернуться на линию?")) return;
+      
+      if (countdownIntervalId) clearInterval(countdownIntervalId);
+      document.getElementById('activeBreakOverlay').style.display = 'none';
+
+      try {
+        // Ставим статус COMPLETED в лог Supabase
+        await db
+          .from('bookings')
+          .update({ status: 'COMPLETED' })
+          .eq('slot_time', activeActionSlotTime)
+          .eq('username', window.currentUser.username);
+
+        await renderTimeGrid(activeActionChannel);
+      } catch (err) { alert(err.message); }
+    }
+
   </script>
     <!-- ПОЛНОЭКРАННЫЙ ТАЙМЕР АКТИВНОГО ПЕРЕРЫВА (скрыт на старте) -->
   <div id="activeBreakOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 8, 20, 0.95); z-index: 200; justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease;">
