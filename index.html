@@ -52,20 +52,39 @@
     <div class="admin-card">
       <div class="admin-header-info">
         <div class="admin-user-badge">ID: <span id="admUserId">admin</span> | <span style="color:#ff007f;">ADMIN: ПАНЕЛЬ</span></div>
+        <!-- Вывод текущей даты -->
+        <div style="font-weight: 700; letter-spacing: 1px;" id="adminCurrentDate">15.07.2026</div>
         <button class="admin-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
       </div>
-      <div class="monitor-tabs">
-        <button class="mon-tab active" onclick="switchMonitorTab('HL', this)">МОНИТОР ЛИНИЯ</button>
-        <button class="mon-tab" onclick="switchMonitorTab('LIVE', this)">МОНИТОР ЧАТ</button>
-        <button class="mon-tab" onclick="switchMonitorTab('NIGHT', this)">МОНИТОР НОЧЬ</button>
+
+      <!-- Вкладки мониторинга смен с кнопками-карандашами для редактирования слотов -->
+      <div class="monitor-tabs" style="align-items: center;">
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <button class="mon-tab active" onclick="switchMonitorTab('HL', this)">МОНИТОР ЛИНИЯ</button>
+          <button class="action-btn" style="padding: 10px; font-size: 14px; border-radius: 8px;" title="Редактировать перерывы Горячей Линии" onclick="openEditSlotsModal('HL')">✏️</button>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <button class="mon-tab" onclick="switchMonitorTab('LIVE', this)">МОНИТОР ЧАТ</button>
+          <button class="action-btn" style="padding: 10px; font-size: 14px; border-radius: 8px;" title="Редактировать перерывы Чата" onclick="openEditSlotsModal('LIVE')">✏️</button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <button class="mon-tab" onclick="switchMonitorTab('NIGHT', this)">МОНИТОР НОЧЬ</button>
+          <button class="action-btn" style="padding: 10px; font-size: 14px; border-radius: 8px;" title="Редактировать перерывы Ночного Чата" onclick="openEditSlotsModal('NIGHT')">✏️</button>
+        </div>
       </div>
+
+      <!-- Кнопки доп. функционала -->
       <div class="admin-actions">
+        <button class="action-btn" onclick="alert('Логика аккаунтов')">+ АККАУНТЫ</button>
         <button class="action-btn" onclick="alert('Добавим логику новостей')">НОВОСТИ LETU</button>
         <button class="action-btn" onclick="alert('Добавим генерацию отчета')">ОТЧЕТ</button>
         <button class="action-btn" onclick="alert('Добавим просмотр инцидентов')">ИНЦИДЕНТЫ</button>
         <button class="action-btn" onclick="alert('Добавим массовый сброс')">СБРОС ВСЕХ</button>
       </div>
     </div>
+
 
     <!-- Форма массового добавления слотов (встроена в панель админа горизонтально) -->
     <div class="admin-card" style="margin-top: -5px;">
@@ -106,7 +125,51 @@
         </button>
       </div>
     </div>
+  <!-- УЛУЧШЕННОЕ МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ СЛОТАМИ -->
+  <div id="slotsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 8, 20, 0.85); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+    <div class="admin-card" style="width: 100%; max-width: 550px; padding: 25px; box-shadow: 0 20px 50px rgba(0,0,0,0.6); display: flex; flex-direction: column; max-height: 90vh;">
+      
+      <!-- Шапка модалки -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid var(--border-sea); padding-bottom: 10px; flex-shrink: 0;">
+        <h3 style="font-size: 15px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+          ИНТЕРВАЛЫ: <span id="modalChannelTitle" style="color: var(--accent-neon);">КАНАЛ</span>
+        </h3>
+        <button class="reset-row-btn" style="font-size: 20px;" onclick="closeEditSlotsModal()">✕</button>
+      </div>
 
+      <!-- Блок добавления нового интервала (как в старой версии) -->
+      <div style="background: var(--input-bg); border: 1px solid var(--border-sea); padding: 15px; border-radius: 10px; margin-bottom: 15px; flex-shrink: 0;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--text-gray); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; text-align: left;">➕ Добавить новые интервалы:</div>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <select id="importType" style="width: 100%; background: var(--card-sea); border: 1px solid var(--border-sea); padding: 10px; border-radius: 6px; color: var(--text-white); font-size: 13px; outline: none; cursor: pointer;">
+            <option value="short">Перерыв короткий</option>
+            <option value="mid" id="modalMidOption">Перерыв 20 мин</option>
+            <option value="lunch" id="modalLunchOption">Обед</option>
+          </select>
+
+          <div style="display: flex; gap: 10px;">
+            <textarea id="importRawText" style="flex: 1; background: var(--card-sea); border: 1px solid var(--border-sea); height: 38px; padding: 8px 12px; border-radius: 6px; color: var(--text-white); font-size: 14px; outline: none; resize: none; font-family: monospace;" placeholder="Например: 16:00-16:15 (можно пачкой с новой строки)"></textarea>
+            <button style="background: var(--accent-neon); color: #0a1128; border: none; padding: 0 20px; font-size: 13px; font-weight: 700; border-radius: 6px; cursor: pointer; height: 38px;" onclick="handleMassImportSlots()">OK</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Живой список текущих тегов на листе с автосортировкой -->
+      <div style="text-align: left; margin-bottom: 8px; font-size: 11px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; flex-shrink: 0;">
+        📋 Текущий список на листе (с автосортировкой часов):
+      </div>
+      
+      <!-- Контейнер со скроллом для вывода тегов -->
+      <div style="flex-grow: 1; overflow-y: auto; background: var(--input-bg); border: 1px solid var(--border-sea); border-radius: 10px; padding: 15px; display: flex; flex-direction: column; gap: 15px; margin-bottom: 15px;" id="modalTagsContainer">
+        <!-- Сюда JS будет рендерить группы тегов -->
+      </div>
+
+      <!-- Кнопка закрытия -->
+      <button style="width: 100%; background: var(--border-sea); color: var(--text-white); border: 1px solid var(--border-sea); padding: 12px; font-size: 13px; font-weight: 700; border-radius: 6px; cursor: pointer; flex-shrink: 0;" onclick="closeEditSlotsModal()">ЗАКРЫТЬ</button>
+
+    </div>
+  </div>
 
   <script>
     if (!window.supabaseInstance) {
@@ -309,9 +372,10 @@
       else title.innerText = 'ЧАТ LIVETEX НОЧЬ';
       console.log(`Админ переключился на просмотр смены: ${tabType}`);
     }
-        // Функция массового импорта слотов времени для админа
+    // Функция массового импорта слотов времени для админа
     async function handleMassImportSlots() {
-      const channel = document.getElementById('importChannel').value;
+      // ИСПРАВЛЕНО: берём сохранённый канал из активной модалки
+      const channel = activeModalChannel; 
       const type = document.getElementById('importType').value;
       const rawText = document.getElementById('importRawText').value.trim();
 
@@ -360,6 +424,157 @@
         alert("Ошибка при массовом импорте: " + err.message);
       }
     }
+    let activeModalChannel = '';
+
+    // Функция открытия модалки + подгрузка живых тегов из Supabase
+    async function openEditSlotsModal(channel) {
+      activeModalChannel = channel;
+      
+      const modal = document.getElementById('slotsModal');
+      const title = document.getElementById('modalChannelTitle');
+      const midOption = document.getElementById('modalMidOption');
+      const lunchOption = document.getElementById('modalLunchOption');
+      
+      if (channel === 'HL') {
+        title.innerText = 'ЛИНИЯ';
+        midOption.style.display = 'none';
+        lunchOption.innerText = 'Обед 30 мин';
+      } else {
+        title.innerText = channel === 'LIVE' ? 'ЧАТ LIVETEX' : 'ЧАТ НОЧЬ';
+        midOption.style.display = 'block';
+        lunchOption.innerText = 'Обед 40 мин';
+      }
+      
+      document.getElementById('importRawText').value = '';
+      modal.style.display = 'flex';
+      
+      // Запускаем чтение и отрисовку тегов
+      await fetchAndRenderModalTags();
+    }
+
+    function closeEditSlotsModal() {
+      document.getElementById('slotsModal').style.display = 'none';
+    }
+
+    // Функция загрузки и автоматической сортировки тегов времени
+    async function fetchAndRenderModalTags() {
+      const container = document.getElementById('modalTagsContainer');
+      container.innerHTML = '<div style="color:var(--text-gray); text-align:center;">Загрузка интервалов...</div>';
+      
+      try {
+        // Запрашиваем слоты для этого канала С СОРТИРОВКОЙ по времени!
+        const { data: slots, error } = await db
+          .from('time_slots')
+          .select('id, slot_time, type')
+          .eq('channel', activeModalChannel)
+          .order('slot_time', { ascending: true }); // Магия автоматической сортировки часов!
+
+        if (error) throw error;
+        container.innerHTML = '';
+
+        if (!slots || slots.length === 0) {
+          container.innerHTML = '<div style="color:var(--text-gray); text-align:center; padding:10px;">Лист пуст. Добавьте первый интервал!</div>';
+          return;
+        }
+
+        // Разделяем на группы: короткие, средние, обеды
+        const shortSlots = slots.filter(s => s.type === 'short');
+        const midSlots = slots.filter(s => s.type === 'mid');
+        const lunchSlots = slots.filter(s => s.type === 'lunch');
+
+        // Вспомогательная функция для сборки красивых блоков с тегами
+        const createGroupHTML = (titleText, slotsArray, colorClass) => {
+          if (slotsArray.length === 0) return '';
+          
+          let block = document.createElement('div');
+          block.innerHTML = `<div style="font-size:12px; font-weight:700; color:${colorClass}; margin-bottom:8px;">${titleText}:</div>`;
+          
+          let tagsWrapper = document.createElement('div');
+          tagsWrapper.style.display = 'flex';
+          tagsWrapper.style.flexWrap = 'wrap';
+          tagsWrapper.style.gap = '6px';
+          
+          slotsArray.forEach(s => {
+            const tag = document.createElement('div');
+            // Применяем стиль мини-тега со светящейся кнопкой-крестиком
+            tag.className = 'adm-int-tag';
+            tag.style.fontSize = '12px';
+            tag.style.padding = '4px 8px';
+            tag.innerHTML = `${s.slot_time} <span style="margin-left:6px; color:#ff4d4d; font-weight:700; cursor:pointer;" onclick="deleteSingleSlot(${s.id})">✕</span>`;
+            tagsWrapper.appendChild(tag);
+          });
+          
+          block.appendChild(tagsWrapper);
+          return block;
+        };
+
+        // Рендерим группы в контейнер по очереди
+        let labelShort = activeModalChannel === 'HL' ? 'Перерывы 10 мин' : 'Перерывы 15 мин';
+        let labelLunch = activeModalChannel === 'HL' ? 'Обеды 30 мин' : 'Обеды 40 мин';
+
+        const htmlShort = createGroupHTML(labelShort, shortSlots, 'var(--accent-neon)');
+        const htmlMid = createGroupHTML('Перерывы 20 мин', midSlots, '#9d4edd');
+        const htmlLunch = createGroupHTML(labelLunch, lunchSlots, '#ff007f');
+
+        if (htmlShort) container.appendChild(htmlShort);
+        if (htmlMid) container.appendChild(htmlMid);
+        if (htmlLunch) container.appendChild(htmlLunch);
+
+      } catch (err) {
+        container.innerHTML = `<div style="color:#ff4d4d;">Ошибка: ${err.message}</div>`;
+      }
+    }
+
+    // Функция удаления одного конкретного тега по клику на крестик
+    async function deleteSingleSlot(id) {
+      if (!confirm("Удалить этот временной интервал из расписания?")) return;
+      try {
+        const { error } = await db
+          .from('time_slots')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        // Мгновенно перерисовываем список тегов
+        await fetchAndRenderModalTags();
+      } catch (err) { alert("Ошибка удаления: " + err.message); }
+    }
+
+    // Обновленная функция сохранения пачки
+    async function handleMassImportSlots() {
+      const channel = activeModalChannel;
+      const type = document.getElementById('importType').value;
+      const rawText = document.getElementById('importRawText').value.trim();
+
+      if (!rawText) {
+        alert("Введите временной интервал!");
+        return;
+      }
+
+      const lines = rawText.split('\n');
+      const slotsToInsert = [];
+      const regex = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
+
+      for (let line of lines) {
+        let slot = line.trim();
+        if (!slot) continue;
+        if (!regex.test(slot)) {
+          alert(`Неверный формат строки "${line}"! Используйте ЧЧ:ММ-ЧЧ:ММ`);
+          return;
+        }
+        slotsToInsert.push({ slot_time: slot, type: type, channel: channel });
+      }
+
+      try {
+        const { error } = await db.from('time_slots').upsert(slotsToInsert);
+        if (error) throw error;
+
+        document.getElementById('importRawText').value = '';
+        // Мгновенно перерисовываем теги — новое время встанет на свое место по хронологии!
+        await fetchAndRenderModalTags();
+      } catch (err) { alert("Ошибка импорта: " + err.message); }
+    }
+
   </script>
 </body>
 </html>
