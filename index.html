@@ -181,8 +181,59 @@
       renderTimeGrid(channelType);
     }
 
+    // Главная функция генерации сетки расписания для оператора
     function renderTimeGrid(channel) {
-      document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:var(--accent-neon);width:100%;">⏳ Здесь будет генерироваться сетка времени для канала: [${channel}]</div>`;
+      // Полностью очищаем тело страницы под рабочий интерфейс
+      document.body.innerHTML = '';
+      
+      // Создаем обертку для сетки перерывов
+      const wrapper = document.createElement('div');
+      wrapper.className = 'grid-wrapper';
+      
+      // Шапка рабочего экрана
+      let channelName = channel === 'HL' ? 'ГОРЯЧАЯ ЛИНИЯ' : (channel === 'LIVE' ? 'ЧАТ LIVETEX' : 'ЧАТ LIVETEX НОЧЬ');
+      
+      wrapper.innerHTML = `
+        <div class="grid-header-card">
+          <div class="grid-user-info">
+            Оператор: <span>${window.currentUser.username}</span> | Канал: <span style="color:var(--accent-neon);">${channelName}</span>
+          </div>
+          <button class="grid-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+        </div>
+        
+        <div class="grid-columns-container">
+          <!-- Колонка 1: Короткие перерывы -->
+          <div class="grid-column">
+            <h4 class="col-title">ПЕРЕРЫВЫ ${channel === 'HL' ? '10 МИН' : '15 МИН'}</h4>
+            <div class="slots-box" id="shortBreaksBox">
+              <!-- Сюда JS накидает кнопки -->
+              <button class="slot-item-btn free">09:00-09:15</button>
+              <button class="slot-item-btn my-booking">09:15-09:30</button>
+              <button class="slot-item-btn busy">09:30-09:45 <span class="busy-by">ID 220</span></button>
+            </div>
+          </div>
+          
+          <!-- Колонка 2: Только для LIVE и NIGHT (20 минут) -->
+          ${channel !== 'HL' ? `
+          <div class="grid-column">
+            <h4 class="col-title">ПЕРЕРЫВЫ 20 МИН</h4>
+            <div class="slots-box" id="midBreaksBox">
+              <button class="slot-item-btn free">12:00-12:20</button>
+            </div>
+          </div>
+          ` : ''}
+          
+          <!-- Колонка 3: Обеды -->
+          <div class="grid-column">
+            <h4 class="col-title">ОБЕДЫ (40 МИН)</h4>
+            <div class="slots-box" id="lunchesBox">
+              <button class="slot-item-btn free">13:00-13:40</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(wrapper);
     }
 
     function startIdProject(user) {
