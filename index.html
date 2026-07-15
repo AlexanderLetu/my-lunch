@@ -262,15 +262,23 @@
       let lunchDuration = channel === 'HL' ? '30 МИН' : '40 МИН';
       
       wrapper.innerHTML = `
-        <div class="grid-header-card">
-          <div class="grid-user-info">
-            Оператор: <span>${window.currentUser.username}</span> | Канал: <span style="color:var(--accent-neon);">${channelName}</span>
+        <div class="grid-header-card" style="flex-direction: column; gap: 15px; text-align: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div class="grid-user-info">
+              ID: <span>${window.currentUser.username}</span> | Канал: <span style="color:var(--accent-neon);">${channelName}</span>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <button class="theme-toggle-inline" onclick="toggleTheme()">🌓 Тема</button>
+              <button class="grid-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+            </div>
           </div>
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <button class="theme-toggle-inline" onclick="toggleTheme()">🌓 Тема</button>
-            <button class="grid-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+
+          <!-- НАШ НОВЫЙ КОНТЕЙНЕР ДЛЯ ЛИЧНЫХ СЛОТОВ В ШАПКЕ -->
+          <div id="operatorMyPlan" style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; width: 100%; min-height: 30px;">
+            <!-- Сюда JavaScript будет автоматически клонировать теги Оксаны -->
           </div>
         </div>
+
         
         <div class="grid-columns-container">
           <!-- Колонка 1 -->
@@ -735,5 +743,14 @@
     }
 
   </script>
+    <!-- ПОЛНОЭКРАННЫЙ ТАЙМЕР АКТИВНОГО ПЕРЕРЫВА (скрыт на старте) -->
+  <div id="activeBreakOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 8, 20, 0.95); z-index: 200; justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease;">
+    <div style="font-size: 14px; font-weight: 700; color: var(--accent-neon); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px;">ПЕРЕРЫВ</div>
+    <div id="countdownTimerDisplay" style="font-size: 80px; font-weight: 800; color: #ff007f; text-shadow: 0 0 20px rgba(255, 0, 127, 0.4); font-family: monospace; margin-bottom: 30px; letter-spacing: 2px;">00:00</div>
+    <button style="background: #ff007f; color: #ffffff; border: none; padding: 12px 30px; font-size: 14px; font-weight: 700; border-radius: 8px; cursor: pointer; box-shadow: 0 0 15px rgba(255, 0, 127, 0.3); transition: all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="handleEarlyCompleteBreak()">
+      ЗАВЕРШИТЬ
+    </button>
+  </div>
+
 </body>
 </html>
