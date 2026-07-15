@@ -456,18 +456,18 @@
       document.getElementById('slotsModal').style.display = 'none';
     }
 
-    // Функция загрузки и автоматической сортировки тегов времени
+    // Функция загрузки и автоматической сортировки тегов времени (без ID)
     async function fetchAndRenderModalTags() {
       const container = document.getElementById('modalTagsContainer');
       container.innerHTML = '<div style="color:var(--text-gray); text-align:center;">Загрузка интервалов...</div>';
       
       try {
-        // Запрашиваем слоты для этого канала С СОРТИРОВКОЙ по времени!
+        // Убрали 'id' из select, запрашиваем только существующие колонки
         const { data: slots, error } = await db
           .from('time_slots')
-          .select('id, slot_time, type')
+          .select('slot_time, type')
           .eq('channel', activeModalChannel)
-          .order('slot_time', { ascending: true }); // Магия автоматической сортировки часов!
+          .order('slot_time', { ascending: true });
 
         if (error) throw error;
         container.innerHTML = '';
@@ -477,12 +477,10 @@
           return;
         }
 
-        // Разделяем на группы: короткие, средние, обеды
         const shortSlots = slots.filter(s => s.type === 'short');
         const midSlots = slots.filter(s => s.type === 'mid');
         const lunchSlots = slots.filter(s => s.type === 'lunch');
 
-        // Вспомогательная функция для сборки красивых блоков с тегами
         const createGroupHTML = (titleText, slotsArray, colorClass) => {
           if (slotsArray.length === 0) return '';
           
@@ -496,11 +494,11 @@
           
           slotsArray.forEach(s => {
             const tag = document.createElement('div');
-            // Применяем стиль мини-тега со светящейся кнопкой-крестиком
             tag.className = 'adm-int-tag';
             tag.style.fontSize = '12px';
             tag.style.padding = '4px 8px';
-            tag.innerHTML = `${s.slot_time} <span style="margin-left:6px; color:#ff4d4d; font-weight:700; cursor:pointer;" onclick="deleteSingleSlot(${s.id})">✕</span>`;
+            // Передаем в функцию удаления само время и тип текстом
+            tag.innerHTML = `${s.slot_time} <span style="margin-left:6px; color:#ff4d4d; font-weight:700; cursor:pointer;" onclick="deleteSingleSlot('${s.slot_time}', '${s.type}')">✕</span>`;
             tagsWrapper.appendChild(tag);
           });
           
@@ -508,7 +506,6 @@
           return block;
         };
 
-        // Рендерим группы в контейнер по очереди
         let labelShort = activeModalChannel === 'HL' ? 'Перерывы 10 мин' : 'Перерывы 15 мин';
         let labelLunch = activeModalChannel === 'HL' ? 'Обеды 30 мин' : 'Обеды 40 мин';
 
@@ -525,18 +522,20 @@
       }
     }
 
-    // Функция удаления одного конкретного тега по клику на крестик
-    async function deleteSingleSlot(id) {
-      if (!confirm("Удалить этот временной интервал из расписания?")) return;
+    // Исправленная функция удаления по составному ключу (без ID)
+    async function deleteSingleSlot(slotTime, type) {
+      if (!confirm(`Удалить интервал ${slotTime} из расписания?`)) return;
       try {
+        // Удаляем строку, у которой совпадают все три параметра составного ключа
         const { error } = await db
           .from('time_slots')
           .delete()
-          .eq('id', id);
+          .eq('slot_time', slotTime)
+          .eq('type', type)
+          .eq('channel', activeModalChannel);
 
         if (error) throw error;
-        // Мгновенно перерисовываем список тегов
-        await fetchAndRenderModalTags();
+        await fetchAndRenderModalTags(); // Мгновенно обновляем список
       } catch (err) { alert("Ошибка удаления: " + err.message); }
     }
 
