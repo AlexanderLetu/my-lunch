@@ -182,15 +182,13 @@
     }
 
     // Главная функция генерации сетки расписания для оператора
-    function renderTimeGrid(channel) {
+    async function renderTimeGrid(channel) {
       document.body.innerHTML = '';
       
       const wrapper = document.createElement('div');
       wrapper.className = 'grid-wrapper';
       
       let channelName = channel === 'HL' ? 'ГОРЯЧАЯ ЛИНИЯ' : (channel === 'LIVE' ? 'ЧАТ LIVETEX' : 'ЧАТ LIVETEX НОЧЬ');
-      
-      // Вычисляем длительность обеда: для HL - 30 минут, для чатов - 40 минут
       let lunchDuration = channel === 'HL' ? '30 МИН' : '40 МИН';
       
       wrapper.innerHTML = `
@@ -199,7 +197,6 @@
             Оператор: <span>${window.currentUser.username}</span> | Канал: <span style="color:var(--accent-neon);">${channelName}</span>
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
-            <!-- Перенесли кнопку смены темы внутрь шапки для удобства -->
             <button class="theme-toggle-inline" onclick="toggleTheme()">🌓 Тема</button>
             <button class="grid-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
           </div>
@@ -209,34 +206,75 @@
           <!-- Колонка 1: Короткие перерывы -->
           <div class="grid-column">
             <h4 class="col-title">ПЕРЕРЫВЫ ${channel === 'HL' ? '10 МИН' : '15 МИН'}</h4>
-            <div class="slots-box" id="shortBreaksBox">
-              <button class="slot-item-btn free">09:00-09:15</button>
-              <button class="slot-item-btn my-booking">09:15-09:30</button>
-              <button class="slot-item-btn busy">09:30-09:45 <span class="busy-by">ID 220</span></button>
-            </div>
+            <div class="slots-box" id="shortBreaksBox"><div style="color:var(--text-gray); text-align:center; padding:20px;">Загрузка...</div></div>
           </div>
           
           <!-- Колонка 2: Только для LIVE и NIGHT (20 минут) -->
           ${channel !== 'HL' ? `
           <div class="grid-column">
             <h4 class="col-title">ПЕРЕРЫВЫ 20 МИН</h4>
-            <div class="slots-box" id="midBreaksBox">
-              <button class="slot-item-btn free">12:00-12:20</button>
-            </div>
+            <div class="slots-box" id="midBreaksBox"><div style="color:var(--text-gray); text-align:center; padding:20px;">Загрузка...</div></div>
           </div>
           ` : ''}
           
-          <!-- Колонка 3: Обеды (динамическая длительность) -->
+          <!-- Колонка 3: Обеды -->
           <div class="grid-column">
             <h4 class="col-title">ОБЕДЫ (${lunchDuration})</h4>
-            <div class="slots-box" id="lunchesBox">
-              <button class="slot-item-btn free">13:00-13:40</button>
-            </div>
+            <div class="slots-box" id="lunchesBox"><div style="color:var(--text-gray); text-align:center; padding:20px;">Загрузка...</div></div>
           </div>
         </div>
       `;
       
       document.body.appendChild(wrapper);
+
+      try {
+        // Запрашиваем из Supabase все интервалы, которые относятся к ВЫБРАННОМУ каналу
+        const { data: slots, error } = await db
+          .from('time_slots')
+          .select('slot_time, type')
+          .eq('channel', channel);
+
+        if (error) throw error;
+
+        // Находим контейнеры колонок на странице
+        const shortBox = document.getElementById('shortBreaksBox');
+        const midBox = document.getElementById('midBreaksBox');
+        const lunchBox = document.getElementById('lunchesBox');
+
+        // Очищаем надписи "Загрузка..." перед выводом кнопок
+        if (shortBox) shortBox.innerHTML = '';
+        if (midBox) midBox.innerHTML = '';
+        if (lunchBox) lunchBox.innerHTML = '';
+
+        if (!slots || slots.length === 0) {
+          const emptyMsg = '<div style="color:var(--text-gray); text-align:center; padding:20px;">Нет доступных слотов</div>';
+          if (shortBox) shortBox.innerHTML = emptyMsg;
+          if (midBox) midBox.innerHTML = emptyMsg;
+          if (lunchBox) lunchBox.innerHTML = emptyMsg;
+          return;
+        }
+
+        // Бежим по массиву полученных из базы слотов и распределяем их по колонкам
+        slots.forEach(slot => {
+          // Создаем красивую кнопку для каждого интервала
+          const btn = document.createElement('button');
+          btn.className = 'slot-item-btn free'; // По умолчанию все свободные, брони прикрутим следующим шагом
+          btn.innerText = slot.slot_time;
+          btn.onclick = () => alert(`Вы кликнули на слот: ${slot.slot_time}`);
+
+          // Раскидываем кнопки по ID контейнеров в зависимости от типа 'short', 'mid', 'lunch'
+          if (slot.type === 'short' && shortBox) {
+            shortBox.appendChild(btn);
+          } else if (slot.type === 'mid' && midBox) {
+            midBox.appendChild(btn);
+          } else if (slot.type === 'lunch' && lunchBox) {
+            lunchBox.appendChild(btn);
+          }
+        });
+
+      } catch (err) {
+        alert("Ошибка загрузки расписания из базы: " + err.message);
+      }
     }
 
     function startIdProject(user) {
