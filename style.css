@@ -415,3 +415,139 @@ body {
 .reset-row-btn:hover {
   color: #ff4d4d;
 }
+/* ==================== СЕТКА ВРЕМЕНИ ДЛЯ ОПЕРАТОРОВ ==================== */
+.grid-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.grid-header-card {
+  background: var(--card-sea);
+  border: 1px solid var(--border-sea);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.grid-user-info {
+  font-size: 15px;
+  font-weight: 600;
+}
+.grid-user-info span {
+  color: var(--accent-neon);
+}
+
+.grid-logout-btn {
+  background: rgba(255, 77, 77, 0.1);
+  color: #ff4d4d;
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.grid-logout-btn:hover {
+  background: #ff4d4d;
+  color: #ffffff;
+}
+
+/* Колонки расписания */
+.grid-columns-container {
+  display: flex;
+  gap: 20px;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.grid-column {
+  flex: 1;
+  background: var(--card-sea);
+  border: 1px solid var(--border-sea);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.col-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-gray);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--border-sea);
+  padding-bottom: 8px;
+  text-align: center;
+}
+
+.slots-box {
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+/* Кнопки слотов времени */
+.slot-item-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid var(--border-sea);
+  transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Состояние: Свободный слот */
+.slot-item-btn.free {
+  background: var(--input-bg);
+  color: var(--text-white);
+}
+.slot-item-btn.free:hover {
+  border-color: var(--accent-neon);
+  box-shadow: 0 0 10px rgba(0, 180, 216, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Состояние: Забронировано мной */
+.slot-item-btn.my-booking {
+  background: rgba(0, 180, 216, 0.15);
+  border-color: var(--accent-neon);
+  color: var(--accent-neon);
+  box-shadow: 0 0 12px rgba(0, 180, 216, 0.2);
+}
+
+/* Состояние: Занято кем-то другим */
+.slot-item-btn.busy {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: #333;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.busy-by {
+  font-size: 11px;
+  background: #222;
+  color: #aaa;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
