@@ -181,25 +181,40 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 /* ==================== АДМИН ПАНЕЛЬ ==================== */
+/* Обновленный контейнер: отключаем скролл для всего экрана */
 .admin-wrapper {
   width: 100%;
   max-width: 1200px;
-  margin: 20px auto;
-  padding: 0 20px;
-  height: calc(100vh - 40px);
+  margin: 0 auto;
+  padding: 20px;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  overflow-y: auto;
+  overflow: hidden; /* Весь экран больше не прыгает и не скроллится */
 }
 
-/* Верхний блок управления админа */
+/* Шапка админа: намертво стоит на месте */
 .admin-card {
   background: var(--card-sea);
   border: 1px solid var(--border-sea);
   border-radius: 14px;
   padding: 20px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0; /* Запрещаем шапке сжиматься */
+}
+
+/* Обновленный контейнер таблицы: теперь скроллится СТРОГО только он */
+.monitoring-container {
+  background: var(--card-sea);
+  border: 1px solid var(--border-sea);
+  border-radius: 14px;
+  padding: 24px;
+  flex-grow: 1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* Включаем внутренний скролл только для списка операторов */
 }
 
 .admin-header-info {
