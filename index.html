@@ -108,9 +108,12 @@
             <option value="lunch" id="modalLunchOption">Обед</option>
           </select>
 
-          <div style="display: flex; gap: 10px;">
-            <textarea id="importRawText" style="flex: 1; background: var(--card-sea); border: 1px solid var(--border-sea); height: 38px; padding: 8px 12px; border-radius: 6px; color: var(--text-white); font-size: 14px; outline: none; resize: none; font-family: monospace;" placeholder="Например: 16:00-16:15 (можно пачкой с новой строки)"></textarea>
-            <button style="background: var(--accent-neon); color: #0a1128; border: none; padding: 0 20px; font-size: 13px; font-weight: 700; border-radius: 6px; cursor: pointer; height: 38px;" onclick="handleMassImportSlots()">OK</button>
+                   <!-- Обновленный блок ввода: поле на всю ширину + кнопка снизу -->
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 5px;">
+            <textarea id="importRawText" style="width: 100%; background: var(--card-sea); border: 1px solid var(--border-sea); height: 80px; padding: 10px 12px; border-radius: 6px; color: var(--text-white); font-size: 14px; outline: none; resize: none; font-family: monospace;" placeholder="Вставьте интервалы (каждый с новой строки)&#10;Пример:&#10;10:00-10:15&#10;10:15-10:30"></textarea>
+            <button style="width: 100%; background: var(--accent-neon); color: #0a1128; border: none; padding: 10px; font-size: 13px; font-weight: 700; border-radius: 6px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="handleMassImportSlots()">
+              ДОБАВИТЬ ИНТЕРВАЛЫ
+            </button>
           </div>
         </div>
       </div>
