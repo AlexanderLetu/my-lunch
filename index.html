@@ -164,14 +164,15 @@
         return;
       }
       try {
+        // Вызываем безопасную функцию RPC вместо прямого чтения таблицы
         const { data: user, error } = await db
-          .from('users')
-          .select('username, password, role')
-          .eq('username', inputUser)
+          .rpc('check_user_login', { input_user: inputUser, input_pass: inputPass })
           .maybeSingle();
 
         if (error) throw error;
-        if (!user || user.password !== inputPass) {
+
+        // Если функция вернула null — значит логин или пароль неверные
+        if (!user) {
           showError("Неверный логин или пароль!");
           return;
         }
@@ -181,21 +182,13 @@
         // Прячем коробку авторизации
         document.getElementById('authBox').style.display = 'none';
 
-        // Проверяем роль: если админ, открываем панель управления
+        // Проверяем роль
         if (user.role === 'admin') {
           document.getElementById('admUserId').innerText = user.username;
           document.getElementById('adminDashboard').style.display = 'flex';
           return;
         }
 
-        // Если обычный оператор, запускаем выбор смены
-        if (currentProject === 'breaks') { 
-          startBreaksProject(user); 
-        } else { 
-          startIdProject(user); 
-        }
-
-        // Запускаем логику нужного проекта
         if (currentProject === 'breaks') { 
           startBreaksProject(user); 
         } else { 
@@ -204,7 +197,6 @@
       } catch (err) { 
         showError("Ошибка подключения: " + err.message); 
       }
-    }
 
     function showError(text) {
       const errorBlock = document.getElementById('errorBlock');
