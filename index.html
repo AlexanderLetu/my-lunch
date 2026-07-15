@@ -303,9 +303,12 @@
         slots.forEach(slot => {
           // Создаем красивую кнопку для каждого интервала
           const btn = document.createElement('button');
-          btn.className = 'slot-item-btn free'; // По умолчанию все свободные, брони прикрутим следующим шагом
+          btn.className = 'slot-item-btn free'; 
           btn.innerText = slot.slot_time;
-          btn.onclick = () => alert(`Вы кликнули на слот: ${slot.slot_time}`);
+          
+          // Привязываем живую функцию бронирования по клику
+          btn.onclick = () => handleSlotBooking(slot.slot_time, channel, btn);
+
 
           // Раскидываем кнопки по ID контейнеров в зависимости от типа 'short', 'mid', 'lunch'
           if (slot.type === 'short' && shortBox) {
@@ -537,6 +540,44 @@
         // Мгновенно перерисовываем теги — новое время встанет на свое место по хронологии!
         await fetchAndRenderModalTags();
       } catch (err) { alert("Ошибка импорта: " + err.message); }
+    }
+        // Функция бронирования временного слота оператором
+    async function handleSlotBooking(slotTime, channel, buttonElement) {
+      // Спрашиваем подтверждение, чтобы избежать случайных нажатий
+      if (!confirm(`Вы действительно хотите забронировать перерыв на время ${slotTime}?`)) return;
+
+      try {
+        // Отправляем запись в таблицу bookings (наш новый защищенный лог)
+        const { data, error } = await db
+          .from('bookings')
+          .insert([
+            {
+              slot_time: slotTime,
+              username: window.currentUser.username, // ID вошедшего оператора
+              channel: channel,                      // Канал связи (HL, LIVE, NIGHT)
+              status: 'BOOKED'                       // Маркер БРОНИ
+            }
+          ]);
+
+        // Если этот слот уже кто-то успел занять, составной ключ базы выдаст ошибку
+        if (error) {
+          if (error.code === '23505') { // Код ошибки дубликата в PostgreSQL
+            alert("Ошибка! Этот временной интервал уже занят другим оператором!");
+            location.reload(); // Перезагружаем страницу, чтобы обновить сетку
+          } else {
+            throw error;
+          }
+          return;
+        }
+
+        alert(`Интервал ${slotTime} успешно забронирован! Запись внесена в лог.`);
+        
+        // Визуально меняем стиль кнопки на "Забронировано мной"
+        buttonElement.className = 'slot-item-btn my-booking';
+        
+      } catch (err) {
+        alert("Не удалось зафиксировать бронь в логе: " + err.message);
+      }
     }
 
   </script>
