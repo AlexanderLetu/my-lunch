@@ -44,6 +44,78 @@
     <button class="channel-btn btn-live" onclick="selectChannel('LIVE')">ЧАТ LIVETEX</button>
     <button class="channel-btn btn-night" onclick="selectChannel('NIGHT')">ЧАТ LIVETEX НОЧЬ</button>
   </div>
+    <!-- ОСНОВНОЙ ЭКРАН АДМИНИСТРАТОРА (скрыт на старте) -->
+  <div class="admin-wrapper" id="adminDashboard" style="display: none;">
+    
+    <!-- Шапка управления админа -->
+    <div class="admin-card">
+      <div class="admin-header-info">
+        <div class="admin-user-badge">ID: <span id="admUserId">admin</span> | <span style="color:#ff007f;">ADMIN: ПАНЕЛЬ</span></div>
+        <button class="admin-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+      </div>
+
+      <!-- Вкладки мониторинга смен -->
+      <div class="monitor-tabs">
+        <button class="mon-tab active" onclick="switchMonitorTab('HL', this)">МОНИТОР ЛИНИЯ</button>
+        <button class="mon-tab" onclick="switchMonitorTab('LIVE', this)">МОНИТОР ЧАТ</button>
+        <button class="mon-tab" onclick="switchMonitorTab('NIGHT', this)">МОНИТОР НОЧЬ</button>
+      </div>
+
+      <!-- Кнопки доп. функционала -->
+      <div class="admin-actions">
+        <button class="action-btn" onclick="alert('Добавим логику новостей')">НОВОСТИ LETU</button>
+        <button class="action-btn" onclick="alert('Добавим генерацию отчета')">ОТЧЕТ</button>
+        <button class="action-btn" onclick="alert('Добавим просмотр инцидентов')">ИНЦИДЕНТЫ</button>
+        <button class="action-btn" onclick="alert('Добавим массовый сброс')">СБРОС ВСЕХ</button>
+      </div>
+    </div>
+
+    <!-- Блок вывода текущего мониторинга -->
+    <div class="monitoring-container">
+      <h3 class="monitoring-title">МОНИТОР СМЕНЫ: <span id="currentMonitorTitle">ГОРЯЧАЯ ЛИНИЯ</span></h3>
+      
+      <table class="mon-table">
+        <thead>
+          <tr>
+            <th>Оператор</th>
+            <th>Забронированные интервалы (Клик для удаления слота)</th>
+          </tr>
+        </thead>
+        <tbody id="monitoringTableBody">
+          <!-- Сюда с помощью JavaScript будут генерироваться строки -->
+          <tr class="mon-row">
+            <td class="mon-cell-operator">
+              <div class="operator-id">
+                <button class="reset-row-btn" title="Сбросить оператора целиком" onclick="alert('Сброс юзера')">✕</button>
+                220
+              </div>
+              <div class="operator-time-info">⏱ Общее время: 15 мин</div>
+            </td>
+            <td class="mon-cell-slots">
+              <div class="adm-int-tag" onclick="alert('Удаление этого слота')">11:20-11:35</div>
+              <div class="adm-int-tag" onclick="alert('Удаление этого слота')">13:40-13:55</div>
+            </td>
+          </tr>
+          
+          <tr class="mon-row">
+            <td class="mon-cell-operator">
+              <div class="operator-id">
+                <button class="reset-row-btn" title="Сбросить оператора целиком" onclick="alert('Сброс юзера')">✕</button>
+                236
+              </div>
+              <div class="operator-time-info">⏱ Общее время: 35 мин</div>
+            </td>
+            <td class="mon-cell-slots">
+              <div class="adm-int-tag" onclick="alert('Удаление этого слота')">12:10-12:25</div>
+              <div class="adm-int-tag" onclick="alert('Удаление этого слота')">13:50-14:20</div>
+              <div class="adm-int-tag" onclick="alert('Удаление этого слота')">15:20-15:35</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
 
   <script>
     // Изолированная инициализация базы данных без конфликтов
@@ -109,6 +181,20 @@
         // Прячем коробку авторизации
         document.getElementById('authBox').style.display = 'none';
 
+        // Проверяем роль: если админ, открываем панель управления
+        if (user.role === 'admin') {
+          document.getElementById('admUserId').innerText = user.username;
+          document.getElementById('adminDashboard').style.display = 'flex';
+          return;
+        }
+
+        // Если обычный оператор, запускаем выбор смены
+        if (currentProject === 'breaks') { 
+          startBreaksProject(user); 
+        } else { 
+          startIdProject(user); 
+        }
+
         // Запускаем логику нужного проекта
         if (currentProject === 'breaks') { 
           startBreaksProject(user); 
@@ -149,6 +235,19 @@
     // Архивный проект ИД (заглушка)
     function startIdProject(user) {
       document.body.innerHTML = `<div style="text-align:center;font-size:24px;margin-top:50px;width:100%;color:var(--accent-neon);">🔍 Проект [ИД] успешно запущен для ${user.username}</div>`;
+    }
+        // Функция переключения вкладок мониторинга внутри админки
+    function switchMonitorTab(tabType, element) {
+      document.querySelectorAll('.mon-tab').forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+      
+      const title = document.getElementById('currentMonitorTitle');
+      if (tabType === 'HL') title.innerText = 'ГОРЯЧАЯ ЛИНИЯ';
+      else if (tabType === 'LIVE') title.innerText = 'ЧАТ LIVETEX';
+      else title.innerText = 'ЧАТ LIVETEX НОЧЬ';
+      
+      console.log(`Админ переключился на просмотр смены: ${tabType}`);
+      // Сюда мы на следующем шаге привяжем чтение данных из Supabase таблицы bookings!
     }
   </script>
 </body>
