@@ -4,117 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LETU WORK SPACE</title>
+  
+  <!-- Подключаем стили из отдельного файла CSS -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Подключаем официальную библиотеку Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root {
-      --bg-sea: #0a1128;
-      --card-sea: #1c2541;
-      --accent-neon: #00b4d8;
-      --text-white: #f8f9fa;
-      --text-gray: #9ca3af;
-      --input-bg: #0b0c10;
-      --border-sea: #1f4068;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
-    body { background-color: var(--bg-sea); color: var(--text-white); height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; transition: background-color 0.5s ease; }
-    .project-tabs { position: absolute; top: 20px; right: 20px; display: flex; background: var(--card-sea); padding: 4px; border-radius: 8px; border: 1px solid var(--border-sea); }
-    .tab-btn { background: none; border: none; color: var(--text-gray); padding: 8px 16px; font-size: 14px; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.3s ease; }
-    .tab-btn:hover { color: var(--text-white); }
-    .tab-btn.active { background: var(--accent-neon); color: var(--bg-sea); box-shadow: 0 0 10px rgba(0, 180, 216, 0.4); }
-    .auth-container { background: var(--card-sea); padding: 40px; border-radius: 16px; width: 100%; max-width: 400px; border: 1px solid var(--border-sea); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); text-align: center; }
-    .auth-title { font-size: 22px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 30px; color: var(--text-white); }
-    .auth-title span { color: var(--accent-neon); }
-    .input-group { text-align: left; margin-bottom: 20px; }
-    .input-group label { display: block; font-size: 12px; color: var(--text-gray); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-    .input-field { width: 100%; background: var(--input-bg); border: 1px solid var(--border-sea); padding: 12px 16px; border-radius: 8px; color: var(--text-white); font-size: 15px; outline: none; transition: all 0.3s ease; }
-    .input-field:focus { border-color: var(--accent-neon); box-shadow: 0 0 8px rgba(0, 180, 216, 0.2); }
-    .login-btn { width: 100%; background: var(--accent-neon); color: var(--bg-sea); border: none; padding: 14px; font-size: 16px; font-weight: 700; border-radius: 8px; cursor: pointer; margin-top: 10px; transition: transform 0.1s ease, background 0.3s ease; }
-    .login-btn:hover { background: #0096c7; }
-    .login-btn:active { transform: scale(0.98); }
-    .error-msg { color: #ff4d4d; font-size: 14px; margin-top: 15px; display: none; }
-        /* Контейнер выбора каналов */
-    .channel-container {
-      background: var(--card-sea);
-      padding: 40px;
-      border-radius: 16px;
-      width: 100%;
-      max-width: 440px;
-      border: 1px solid var(--border-sea);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-      text-align: center;
-      animation: fadeIn 0.5s ease forwards;
-    }
-
-    .channel-title {
-      font-size: 20px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      margin-bottom: 30px;
-      color: var(--text-white);
-      text-transform: uppercase;
-    }
-
-    /* Стильные неоновые кнопки каналов */
-    .channel-btn {
-      width: 100%;
-      background: var(--input-bg);
-      color: var(--text-white);
-      border: 2px solid var(--border-sea);
-      padding: 16px;
-      font-size: 15px;
-      font-weight: 700;
-      border-radius: 10px;
-      cursor: pointer;
-      margin-bottom: 16px;
-      letter-spacing: 0.5px;
-      transition: all 0.3s ease;
-    }
-
-    .channel-btn:last-child {
-      margin-bottom: 0;
-    }
-
-    /* Индивидуальная неоновая подсветка для каждой кнопки при наведении */
-    .btn-hl:hover {
-      border-color: #ff007f;
-      box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
-      color: #ff007f;
-      transform: translateY(-2px);
-    }
-
-    .btn-live:hover {
-      border-color: var(--accent-neon);
-      box-shadow: 0 0 15px rgba(0, 180, 216, 0.4);
-      color: var(--accent-neon);
-      transform: translateY(-2px);
-    }
-
-    .btn-night:hover {
-      border-color: #9d4edd;
-      box-shadow: 0 0 15px rgba(157, 78, 221, 0.4);
-      color: #9d4edd;
-      transform: translateY(-2px);
-    }
-
-    .channel-btn:active {
-      transform: scale(0.98);
-    }
-
-    /* Анимация плавного появления окон */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-  </style>
 </head>
 <body>
+
+  <!-- Кнопка переключения дневной/ночной темы -->
+  <button class="theme-toggle" onclick="toggleTheme()">🌓 Сменить тему</button>
+
+  <!-- Вкладки переключения проектов сверху справа -->
   <div class="project-tabs">
     <button class="tab-btn active" onclick="switchProject('breaks')">Перерывы</button>
     <button class="tab-btn" onclick="switchProject('id')">ИД</button>
   </div>
+
+  <!-- Окно авторизации -->
   <div class="auth-container" id="authBox">
-    <h2 class="auth-title">LETU WORK SPACE<br><span id="projectSubTitle">Авторизация: Перерывы</span></h2>
+    <h2 class="auth-title">LETU WORK SPACE<br><span id="projectSubTitle" style="color:var(--accent-neon); font-size:16px;">Авторизация: Перерывы</span></h2>
     <div class="input-group">
       <label for="username">Login:</label>
       <input type="text" id="username" class="input-field" placeholder="Введите ваш ID" autocomplete="off">
@@ -126,38 +36,37 @@
     <button class="login-btn" onclick="handleLogin()">Войти Workspace</button>
     <div class="error-msg" id="errorBlock"></div>
   </div>
-    <!-- Окно выбора канала связи (скрыто по умолчанию) -->
+
+  <!-- Окно выбора канала связи (скрыто на старте) -->
   <div class="channel-container" id="channelBox" style="display: none;">
     <h2 class="channel-title">ВЫБЕРИТЕ КАНАЛ СВЯЗИ</h2>
-    
-    <button class="channel-btn btn-hl" onclick="selectChannel('HL')">
-      ГОРЯЧАЯ ЛИНИЯ
-    </button>
-    
-    <button class="channel-btn btn-live" onclick="selectChannel('LIVE')">
-      ЧАТ LIVETEX
-    </button>
-    
-    <button class="channel-btn btn-night" onclick="selectChannel('NIGHT')">
-      ЧАТ LIVETEX НОЧЬ
-    </button>
+    <button class="channel-btn btn-hl" onclick="selectChannel('HL')">ГОРЯЧАЯ ЛИНИЯ</button>
+    <button class="channel-btn btn-live" onclick="selectChannel('LIVE')">ЧАТ LIVETEX</button>
+    <button class="channel-btn btn-night" onclick="selectChannel('NIGHT')">ЧАТ LIVETEX НОЧЬ</button>
   </div>
+
   <script>
-    // Изолированная инициализация без конфликтов объявления переменных
+    // Изолированная инициализация базы данных без конфликтов
     if (!window.supabaseInstance) {
       const url = 'https://rveladeasrfruhclnfyo.supabase.co'; 
       const key = 'sb_publishable_0pgZg-M-tkZ_De75fQDnVQ__Ssf_Fke';
-      // ИСПРАВЛЕНО: строго supabase.createClient (без js)
-      window.supabaseInstance = supabase.createClient(url, key); 
+      window.supabaseInstance = supabase.createClient(url, key);
     }
     const db = window.supabaseInstance;
 
     let currentProject = 'breaks'; 
     
+    // Функция переключения дневной/ночной темы
+    function toggleTheme() {
+      document.body.classList.toggle('light-theme');
+    }
+
+    // Функция переключения вкладок проектов в углу
     function switchProject(projectType) {
       currentProject = projectType;
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       if (event && event.target) event.target.classList.add('active');
+      
       const subTitle = document.getElementById('projectSubTitle');
       if (projectType === 'breaks') {
         subTitle.innerText = 'Авторизация: Перерывы';
@@ -167,9 +76,11 @@
       document.getElementById('errorBlock').style.display = 'none';
     }
 
+    // Слушатели клавиши Enter в инпутах
     document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
     document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
 
+    // Главная функция авторизации
     async function handleLogin() {
       const errorBlock = document.getElementById('errorBlock');
       errorBlock.style.display = 'none';
@@ -195,40 +106,49 @@
 
         console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
         
-    function startBreaksProject(user) {
-      // Сохраняем данные вошедшего юзера глобально, чтобы использовать их при бронировании
-      window.currentUser = user; 
-      
-      // Плавно переключаем фон на более глубокий океанский/темный
-      document.body.style.backgroundColor = '#040814'; 
-      
-      // Прячем коробку авторизации (на всякий случай принудительно)
-      document.getElementById('authBox').style.display = 'none';
-      
-      // Показываем блок выбора каналов связи
-      document.getElementById('channelBox').style.display = 'block';
-    }
+        // Прячем коробку авторизации
+        document.getElementById('authBox').style.display = 'none';
 
-    // Функция, которая срабатывает при выборе конкретного канала
-    function selectChannel(channelType) {
-      console.log(`Пользователь ${window.currentUser.username} выбрал канал: ${channelType}`);
-      
-      // Прячем выбор каналов
-      document.getElementById('channelBox').style.display = 'none';
-      
-      // Запускаем отрисовку самой сетки времени для выбранного канала
-      renderTimeGrid(channelType);
-    }
-
-    // Заглушка для будущей сетки времени
-    function renderTimeGrid(channel) {
-      document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:var(--accent-neon);width:100%;">⏳ Здесь будет генерироваться сетка времени для канала: [${channel}]</div>`;
+        // Запускаем логику нужного проекта
+        if (currentProject === 'breaks') { 
+          startBreaksProject(user); 
+        } else { 
+          startIdProject(user); 
+        }
+      } catch (err) { 
+        showError("Ошибка подключения: " + err.message); 
+      }
     }
 
     function showError(text) {
       const errorBlock = document.getElementById('errorBlock');
       errorBlock.innerText = text;
       errorBlock.style.display = 'block';
+    }
+
+    // Запуск проекта Перерывов после успешного входа
+    function startBreaksProject(user) {
+      window.currentUser = user; 
+      
+      // Показываем блок выбора каналов связи
+      document.getElementById('channelBox').style.display = 'block';
+    }
+
+    // Функция, которая срабатывает при выборе конкретного канала оператором
+    function selectChannel(channelType) {
+      console.log(`Пользователь ${window.currentUser.username} выбрал канал: ${channelType}`);
+      document.getElementById('channelBox').style.display = 'none';
+      renderTimeGrid(channelType);
+    }
+
+    // Главная функция генерации сетки расписания (на следующем шаге заменим на реальную)
+    function renderTimeGrid(channel) {
+      document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:var(--accent-neon);width:100%;">⏳ Здесь будет генерироваться сетка времени для канала: [${channel}]</div>`;
+    }
+
+    // Архивный проект ИД (заглушка)
+    function startIdProject(user) {
+      document.body.innerHTML = `<div style="text-align:center;font-size:24px;margin-top:50px;width:100%;color:var(--accent-neon);">🔍 Проект [ИД] успешно запущен для ${user.username}</div>`;
     }
   </script>
 </body>
