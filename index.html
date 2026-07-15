@@ -716,13 +716,15 @@
           return;
         }
 
-        // Группируем бронирования по операторам (чтобы у каждого была одна строка со списком тегов)
+        // Группируем бронирования по операторам (с защитой от пустых полей в базе)
         const operatorGroups = {};
         bookings.forEach(b => {
-          if (!operatorGroups[b.username]) {
-            operatorGroups[b.username] = [];
+          // Если имя оператора в базе пустое, пишем 'Аноним'
+          const opName = b.username ? b.username : 'Аноним'; 
+          if (!operatorGroups[opName]) {
+            operatorGroups[opName] = [];
           }
-          operatorGroups[b.username].push(b);
+          operatorGroups[opName].push(b);
         });
 
         // Бежим по сгруппированным операторам и создаем строки таблицы
@@ -743,8 +745,8 @@
           opCell.className = 'mon-cell-operator';
           opCell.innerHTML = `
             <div class="operator-id">
-              <button class="reset-row-btn" title="Сбросить оператора целиком" onclick="handleResetOperator('${operatorId}', '${channel}')">✕</button>
-              ${operatorId}
+              <button class="reset-row-btn" ... onclick="handleResetOperator('${operatorId}', '${channel}')">✕</button>
+              ${operatorId || 'Неизвестный'}
             </div>
             <div class="operator-time-info">⏱ Занято слотов: ${totalSlotsCount}</div>
           `;
