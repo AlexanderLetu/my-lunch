@@ -566,3 +566,24 @@ body {
 .theme-toggle-inline:hover {
   border-color: var(--accent-neon);
 }
+/* Мини-теги забронированного времени в шапке оператора */
+.user-plan-tag {
+  background: rgba(0, 180, 216, 0.05);
+  border: 1px solid var(--accent-neon);
+  color: var(--accent-neon);
+  padding: 6px 16px;
+  border-radius: 20px; /* Делаем их овальными как на скриншоте */
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(0, 180, 216, 0.1);
+  transition: all 0.2s ease;
+}
+
+.user-plan-tag:hover {
+  background: rgba(255, 0, 127, 0.1);
+  border-color: #ff007f;
+  color: #ff007f;
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+  transform: translateY(-1px);
+}
