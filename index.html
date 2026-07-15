@@ -183,22 +183,26 @@
 
     // Главная функция генерации сетки расписания для оператора
     function renderTimeGrid(channel) {
-      // Полностью очищаем тело страницы под рабочий интерфейс
       document.body.innerHTML = '';
       
-      // Создаем обертку для сетки перерывов
       const wrapper = document.createElement('div');
       wrapper.className = 'grid-wrapper';
       
-      // Шапка рабочего экрана
       let channelName = channel === 'HL' ? 'ГОРЯЧАЯ ЛИНИЯ' : (channel === 'LIVE' ? 'ЧАТ LIVETEX' : 'ЧАТ LIVETEX НОЧЬ');
+      
+      // Вычисляем длительность обеда: для HL - 30 минут, для чатов - 40 минут
+      let lunchDuration = channel === 'HL' ? '30 МИН' : '40 МИН';
       
       wrapper.innerHTML = `
         <div class="grid-header-card">
           <div class="grid-user-info">
             Оператор: <span>${window.currentUser.username}</span> | Канал: <span style="color:var(--accent-neon);">${channelName}</span>
           </div>
-          <button class="grid-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <!-- Перенесли кнопку смены темы внутрь шапки для удобства -->
+            <button class="theme-toggle-inline" onclick="toggleTheme()">🌓 Тема</button>
+            <button class="grid-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+          </div>
         </div>
         
         <div class="grid-columns-container">
@@ -206,7 +210,6 @@
           <div class="grid-column">
             <h4 class="col-title">ПЕРЕРЫВЫ ${channel === 'HL' ? '10 МИН' : '15 МИН'}</h4>
             <div class="slots-box" id="shortBreaksBox">
-              <!-- Сюда JS накидает кнопки -->
               <button class="slot-item-btn free">09:00-09:15</button>
               <button class="slot-item-btn my-booking">09:15-09:30</button>
               <button class="slot-item-btn busy">09:30-09:45 <span class="busy-by">ID 220</span></button>
@@ -223,9 +226,9 @@
           </div>
           ` : ''}
           
-          <!-- Колонка 3: Обеды -->
+          <!-- Колонка 3: Обеды (динамическая длительность) -->
           <div class="grid-column">
-            <h4 class="col-title">ОБЕДЫ (40 МИН)</h4>
+            <h4 class="col-title">ОБЕДЫ (${lunchDuration})</h4>
             <div class="slots-box" id="lunchesBox">
               <button class="slot-item-btn free">13:00-13:40</button>
             </div>
