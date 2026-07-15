@@ -56,9 +56,10 @@
   <script>
     // Изолированная инициализация без конфликтов объявления переменных
     if (!window.supabaseInstance) {
-      const url = 'https://supabase.co'; 
+      const url = 'https://rveladeasrfruhclnfyo.supabase.co'; 
       const key = 'sb_publishable_0pgZg-M-tkZ_De75fQDnVQ__Ssf_Fke';
-      window.supabaseInstance = supabasejs.createClient(url, key);
+      // ИСПРАВЛЕНО: строго supabase.createClient (без js)
+      window.supabaseInstance = supabase.createClient(url, key); 
     }
     const db = window.supabaseInstance;
 
