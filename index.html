@@ -47,6 +47,8 @@
 
   <!-- ОСНОВНОЙ ЭКРАН АДМИНИСТРАТОРА (скрыт на старте) -->
   <div class="admin-wrapper" id="adminDashboard" style="display: none;">
+    
+    <!-- Шапка управления админа -->
     <div class="admin-card">
       <div class="admin-header-info">
         <div class="admin-user-badge">ID: <span id="admUserId">admin</span> | <span style="color:#ff007f;">ADMIN: ПАНЕЛЬ</span></div>
@@ -64,30 +66,47 @@
         <button class="action-btn" onclick="alert('Добавим массовый сброс')">СБРОС ВСЕХ</button>
       </div>
     </div>
-    <div class="monitoring-container">
-      <h3 class="monitoring-title">МОНИТОР СМЕНЫ: <span id="currentMonitorTitle">ГОРЯЧАЯ ЛИНИЯ</span></h3>
-      <table class="mon-table">
-        <thead>
-          <tr>
-            <th>Оператор</th>
-            <th>Забронированные интервалы (Клик для удаления слота)</th>
-          </tr>
-        </thead>
-        <tbody id="monitoringTableBody">
-          <tr class="mon-row">
-            <td class="mon-cell-operator">
-              <div class="operator-id"><button class="reset-row-btn" title="Сбросить оператора" onclick="alert('Сброс юзера')">✕</button> 220</div>
-              <div class="operator-time-info">⏱ Общее время: 15 мин</div>
-            </td>
-            <td class="mon-cell-slots">
-              <div class="adm-int-tag" onclick="alert('Удаление этого слота')">11:20-11:35</div>
-              <div class="adm-int-tag" onclick="alert('Удаление этого слота')">13:40-13:55</div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+
+    <!-- Форма массового добавления слотов (встроена в панель админа горизонтально) -->
+    <div class="admin-card" style="margin-top: -5px;">
+      <h4 style="font-size: 13px; color: var(--text-gray); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; text-align: left;">
+        ⚙️ Массовое добавление временных интервалов
+      </h4>
+      <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+        
+        <!-- Выбор канала -->
+        <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; text-align: left;">
+          <label style="font-size: 11px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px;">Канал связи:</label>
+          <select id="importChannel" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-sea); padding: 10px; border-radius: 8px; color: var(--text-white); font-size: 14px; outline: none; cursor: pointer;">
+            <option value="HL">ГОРЯЧАЯ ЛИНИЯ</option>
+            <option value="LIVE">ЧАТ LIVETEX</option>
+            <option value="NIGHT">ЧАТ LIVETEX НОЧЬ</option>
+          </select>
+        </div>
+
+        <!-- Выбор типа -->
+        <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 150px; text-align: left;">
+          <label style="font-size: 11px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px;">Тип перерыва:</label>
+          <select id="importType" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-sea); padding: 10px; border-radius: 8px; color: var(--text-white); font-size: 14px; outline: none; cursor: pointer;">
+            <option value="short">Короткий (10/15 мин)</option>
+            <option value="mid">Средний (20 мин)</option>
+            <option value="lunch">Обед (30/40 мин)</option>
+          </select>
+        </div>
+
+        <!-- Поле ввода текста интервалов -->
+        <div style="display: flex; flex-direction: column; gap: 6px; flex: 2; min-width: 250px; text-align: left;">
+          <label style="font-size: 11px; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px;">Интервалы (Каждый с новой строки):</label>
+          <textarea id="importRawText" style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-sea); height: 40px; padding: 10px; border-radius: 8px; color: var(--text-white); font-size: 14px; outline: none; resize: none; font-family: monospace;" placeholder="10:00-10:15&#10;12:20-12:35"></textarea>
+        </div>
+
+        <!-- Кнопка импорта пачки -->
+        <button style="background: var(--accent-neon); color: #0a1128; border: none; padding: 0 24px; font-size: 13px; font-weight: 700; border-radius: 8px; cursor: pointer; height: 40px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="handleMassImportSlots()">
+          ЗАГРУЗИТЬ ПАЧКУ
+        </button>
+      </div>
     </div>
-  </div>
+
 
   <script>
     if (!window.supabaseInstance) {
@@ -289,6 +308,57 @@
       else if (tabType === 'LIVE') title.innerText = 'ЧАТ LIVETEX';
       else title.innerText = 'ЧАТ LIVETEX НОЧЬ';
       console.log(`Админ переключился на просмотр смены: ${tabType}`);
+    }
+        // Функция массового импорта слотов времени для админа
+    async function handleMassImportSlots() {
+      const channel = document.getElementById('importChannel').value;
+      const type = document.getElementById('importType').value;
+      const rawText = document.getElementById('importRawText').value.trim();
+
+      if (!rawText) {
+        alert("Вставьте хотя бы один временной интервал!");
+        return;
+      }
+
+      // Разбиваем текст по строкам
+      const lines = rawText.split('\n');
+      const slotsToInsert = [];
+      const regex = /^\d{2}:\d{2}-\d{2}:\d{2}$/; // Регулярка проверки формата времени
+
+      for (let line of lines) {
+        let slot = line.trim();
+        if (!slot) continue; // Пропускаем пустые строки
+
+        // Проверяем формат времени
+        if (!regex.test(slot)) {
+          alert(`Ошибка в строке "${line}": Неверный формат! Используйте ЧЧ:ММ-ЧЧ:ММ (например, 14:00-14:15)`);
+          return;
+        }
+
+        // Собираем объект для отправки в базу
+        slotsToInsert.push({
+          slot_time: slot,
+          type: type,
+          channel: channel
+        });
+      }
+
+      if (slotsToInsert.length === 0) return;
+
+      try {
+        // Отправляем всю пачку в Supabase одной командой upsert (игнорирует дубликаты)
+        const { data, error } = await db
+          .from('time_slots')
+          .upsert(slotsToInsert, { onConflict: 'slot_time,type,channel' }); // Наш составной ключ защитит от дублей
+
+        if (error) throw error;
+
+        alert(`Успешно загружено слотов: ${slotsToInsert.length}!`);
+        document.getElementById('importRawText').value = ''; // Очищаем поле ввода
+        
+      } catch (err) {
+        alert("Ошибка при массовом импорте: " + err.message);
+      }
     }
   </script>
 </body>
