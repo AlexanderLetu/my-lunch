@@ -377,8 +377,9 @@
       // ИСПРАВЛЕНО: берём сохранённый канал из активной модалки
       const channel = activeModalChannel; 
       const type = document.getElementById('importType').value;
-      const rawText = document.getElementById('importRawText').value.trim();
-
+      const textarea = document.getElementById('importRawText');
+      const rawText = textarea ? textarea.value.trim() : '';
+      
       if (!rawText) {
         alert("Вставьте хотя бы один временной интервал!");
         return;
@@ -543,8 +544,9 @@
     async function handleMassImportSlots() {
       const channel = activeModalChannel;
       const type = document.getElementById('importType').value;
-      const rawText = document.getElementById('importRawText').value.trim();
-
+      const textarea = document.getElementById('importRawText');
+      const rawText = textarea ? textarea.value.trim() : '';
+      
       if (!rawText) {
         alert("Введите временной интервал!");
         return;
