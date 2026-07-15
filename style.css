@@ -551,3 +551,18 @@ body {
   padding: 2px 6px;
   border-radius: 4px;
 }
+/* Кнопка смены темы встроенная в шапки рабочих экранов */
+.theme-toggle-inline {
+  background: var(--input-bg);
+  color: var(--text-white);
+  border: 1px solid var(--border-sea);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+.theme-toggle-inline:hover {
+  border-color: var(--accent-neon);
+}
