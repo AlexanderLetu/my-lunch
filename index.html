@@ -195,36 +195,34 @@
 
         console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
         
-        // Магия изменения фона: делаем экран полностью черным
-            // Запуск проекта Перерывов после успешного входа
-        function startBreaksProject(user) {
-          window.currentUser = user; 
-          document.body.style.backgroundColor = '#040814'; 
-          document.getElementById('authBox').style.display = 'none';
-          document.getElementById('channelBox').style.display = 'block';
-        }
-    
-        // Функция, которая срабатывает при выборе конкретного канала
-        function selectChannel(channelType) {
-          console.log(`Пользователь ${window.currentUser.username} выбрал канал: ${channelType}`);
-          document.getElementById('channelBox').style.display = 'none';
-          renderTimeGrid(channelType);
-        }
-    
-        // Заглушка для будущей сетки времени
-        function renderTimeGrid(channel) {
-          document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:var(--accent-neon);width:100%;">⏳ Здесь будет генерироваться сетка времени для канала: [${channel}]</div>`;
-        }
+    function startBreaksProject(user) {
+      // Сохраняем данные вошедшего юзера глобально, чтобы использовать их при бронировании
+      window.currentUser = user; 
+      
+      // Плавно переключаем фон на более глубокий океанский/темный
+      document.body.style.backgroundColor = '#040814'; 
+      
+      // Прячем коробку авторизации (на всякий случай принудительно)
+      document.getElementById('authBox').style.display = 'none';
+      
+      // Показываем блок выбора каналов связи
+      document.getElementById('channelBox').style.display = 'block';
+    }
 
-        // Выводим подтверждение на чистом черном фоне
-        if (currentProject === 'breaks') { 
-          document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:#ffffff;margin-top:50px;width:100%;">🚀 Проект [Перерывы] запущен для ${user.username}</div>`; 
-        } else { 
-          document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:#00b4d8;margin-top:50px;width:100%;">🔍 Проект [ИД] запущен для ${user.username}</div>`; 
-        }
-      } catch (err) { 
-        showError("Ошибка подключения: " + err.message); 
-      }
+    // Функция, которая срабатывает при выборе конкретного канала
+    function selectChannel(channelType) {
+      console.log(`Пользователь ${window.currentUser.username} выбрал канал: ${channelType}`);
+      
+      // Прячем выбор каналов
+      document.getElementById('channelBox').style.display = 'none';
+      
+      // Запускаем отрисовку самой сетки времени для выбранного канала
+      renderTimeGrid(channelType);
+    }
+
+    // Заглушка для будущей сетки времени
+    function renderTimeGrid(channel) {
+      document.body.innerHTML = `<div style="text-align:center;font-size:24px;color:var(--accent-neon);width:100%;">⏳ Здесь будет генерироваться сетка времени для канала: [${channel}]</div>`;
     }
 
     function showError(text) {
