@@ -187,102 +187,96 @@
   </div>
 
   <script>
-    // Инициализация Supabase (замени своими ключами)
-    const supabaseUrl = 'https://rveladeasrfruhclnfyo.supabase.co';
-    const supabaseKey = 'sb_publishable_0pgZg-M-tkZ_De75fQDnVQ__Ssf_Fke';
-    const supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
+    // 1. Инициализация базы данных (СТРОГО ОДИН РАЗ)
+const supabaseUrl = 'https://supabase.co'; 
+const supabaseKey = 'sb_publishable_0pgZg-M-tkZ_De75fQDnVQ__Ssf_Fke';
+const supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
 
-    // Глобальная переменная для хранения выбранного сейчас проекта
-    let currentProject = 'breaks'; 
+// 2. Твои глобальные переменные
+let currentProject = 'breaks'; 
 
-    // Функция переключения вкладок проектов
-    function switchProject(projectType) {
-      currentProject = projectType;
-      
-      // Меняем активную кнопку в дизайне
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
+// 3. Функция переключения вкладок проектов
+function switchProject(projectType) {
+  currentProject = projectType;
+  
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
 
-      // Меняем подзаголовок в окне входа
-      const subTitle = document.getElementById('projectSubTitle');
-      if (projectType === 'breaks') {
-        subTitle.innerText = 'Авторизация: Перерывы';
-      } else {
-        subTitle.innerText = 'Авторизация: Проект ИД';
-      }
-      
-      // Сбрасываем прошлые ошибки при переключении
-      document.getElementById('errorBlock').style.display = 'none';
+  const subTitle = document.getElementById('projectSubTitle');
+  if (projectType === 'breaks') {
+    subTitle.innerText = 'Авторизация: Перерывы';
+  } else {
+    subTitle.innerText = 'Авторизация: Проект ИД';
+  }
+  
+  document.getElementById('errorBlock').style.display = 'none';
+}
+
+// 4. Слушатели клавиатуры (Enter) для удобного ввода
+document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
+document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
+
+// 5. Главная функция авторизации
+async function handleLogin() {
+  const errorBlock = document.getElementById('errorBlock');
+  errorBlock.style.display = 'none';
+
+  const inputUser = document.getElementById('username').value.trim().toLowerCase();
+  const inputPass = document.getElementById('password').value.trim();
+
+  if (!inputUser || !inputPass) {
+    showError("Заполните все поля логина и пароля!");
+    return;
+  }
+
+  try {
+    // Делаем реальный точечный запрос в созданную нами таблицу users
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('username, password, role')
+      .eq('username', inputUser)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!user || user.password !== inputPass) {
+      showError("Неверный логин или пароль!");
+      return;
     }
 
-    // Слушаем нажатие кнопки Enter в полях ввода, чтобы входить без мышки
-    document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
-    document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
+    console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
+    
+    // Прячем форму входа
+    document.getElementById('authBox').style.display = 'none';
 
-    // Функция авторизации через Supabase
-    async function handleLogin() {
-      const errorBlock = document.getElementById('errorBlock');
-      errorBlock.style.display = 'none';
-
-      const inputUser = document.getElementById('username').value.trim().toLowerCase();
-      const inputPass = document.getElementById('password').value.trim();
-
-      if (!inputUser || !inputPass) {
-        showError("Заполните все поля логина и пароля!");
-        return;
-      }
-
-      try {
-        // Точечно запрашиваем строку юзера из таблицы users
-        const { data: user, error } = await supabase
-          .from('users')
-          .select('username, password, role')
-          .eq('username', inputUser)
-          .maybeSingle(); // Вернет объект юзера или null, если не найден
-
-        if (error) throw error;
-
-        // Если пользователь не найден или пароль не совпал
-        if (!user || user.password !== inputPass) {
-          showError("Неверный логин или пароль!");
-          return;
-        }
-
-        // Если всё успешно совпало — проверяем куда направлять
-        console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
-        
-        // Скрываем окно авторизации
-        document.getElementById('authBox').style.display = 'none';
-
-        // Запуск логики нужного проекта
-        if (currentProject === 'breaks') {
-          startBreaksProject(user);
-        } else {
-          startIdProject(user);
-        }
-
-      } catch (err) {
-        showError("Ошибка подключения к базе: " + err.message);
-      }
+    // Запускаем нужный проект
+    if (currentProject === 'breaks') {
+      startBreaksProject(user);
+    } else {
+      startIdProject(user);
     }
 
-    function showError(text) {
-      const errorBlock = document.getElementById('errorBlock');
-      errorBlock.innerText = text;
-      errorBlock.style.display = 'block';
-    }
+  } catch (err) {
+    showError("Ошибка подключения к базе: " + err.message);
+  }
+}
 
-    // Заглушка запуска интерфейса Перерывов
-    function startBreaksProject(user) {
-      document.body.innerHTML += `<div style="text-align:center;font-size:24px;">🚀 Проект [Перерывы] запущен для ${user.username} (${user.role})</div>`;
-      // Сюда на следующем шаге мы внедрим интерфейс сетки слотов
-    }
+function showError(text) {
+  const errorBlock = document.getElementById('errorBlock');
+  errorBlock.innerText = text;
+  errorBlock.style.display = 'block';
+}
 
-    // Заглушка запуска интерфейса ИД
-    function startIdProject(user) {
-      document.body.innerHTML += `<div style="text-align:center;font-size:24px;color:var(--accent-neon);">🔍 Проект [ИД] запущен для ${user.username} (${user.role})</div>`;
-      // Сюда мы позже внедрим твою архивную карточку клиентов с поиском
-    }
+// Заглушка проекта Перерывов
+function startBreaksProject(user) {
+  document.body.innerHTML += `<div style="text-align:center;font-size:24px;margin-top:50px;">🚀 Проект [Перерывы] успешно запущен для ${user.username} (${user.role})</div>`;
+}
+
+// Заглушка проекта ИД
+function startIdProject(user) {
+  document.body.innerHTML += `<div style="text-align:center;font-size:24px;margin-top:50px;color:var(--accent-neon);">🔍 Проект [ИД] успешно запущен для ${user.username} (${user.role})</div>`;
+}
+
   </script>
 </body>
 </html>
