@@ -798,7 +798,7 @@
     let activeActionSlotType = '';
     let activeActionChannel = '';
 
-    // Функция открытия модалки управления своим слотом
+    // Функция открытия модалки управления своим слотом (СТАБИЛЬНАЯ ВЕРСИЯ)
     function openCancelBreakModal(slotTime, type, channel) {
       activeActionSlotTime = slotTime;
       activeActionSlotType = type;
@@ -807,20 +807,32 @@
       // Рассчитываем длительность для вывода в скобках
       let durationText = '(15 мин)';
       if (type === 'mid') durationText = '(20 мин)';
-      else if (type === 'lunch') durationText = channel === 'HL' ? '(30 -мин)' : '(40 мин)';
+      else if (type === 'lunch') durationText = channel === 'HL' ? '(30 мин)' : '(40 мин)';
       else if (type === 'short' && channel === 'HL') durationText = '(10 мин)';
 
-      // Выводим данные в модалку
-      document.getElementById('actionModalTimeDisplay').innerText = slotTime;
-      document.getElementById('actionModalDurationDisplay').innerText = durationText;
+      // ЗАЩИТА: Ищем элементы на странице перед записью данных
+      const timeDisplay = document.getElementById('actionModalTimeDisplay');
+      const durationDisplay = document.getElementById('actionModalDurationDisplay');
+      const modal = document.getElementById('breakActionModal');
 
-      // Показываем окно
-      document.getElementById('breakActionModal').style.display = 'flex';
+      if (timeDisplay) timeDisplay.innerText = slotTime;
+      if (durationDisplay) durationDisplay.innerText = durationText;
+
+      if (modal) {
+        // Если модалка существует в DOM — плавно открываем её
+        modal.style.display = 'flex';
+      } else {
+        // Если модалку смыло логикой вкладок — страхуем оператора и запускаем процесс напрямую
+        if (confirm(`⏰ ВЫХОД НА ПЕРЕРЫВ\n\nИнтервал: ${slotTime} ${durationText}\n\nВыйти на перерыв сейчас?`)) {
+          processOperatorConfirmBreak();
+        }
+      }
     }
 
-    // Функция закрытия модалки
+    // Функция закрытия модалки (с защитой от сбоев)
     function closeCancelBreakModal() {
-      document.getElementById('breakActionModal').style.display = 'none';
+      const modal = document.getElementById('breakActionModal');
+      if (modal) modal.style.display = 'none';
     }
 
     // Логика кнопки "Удалить бронь": полностью освобождает слот для всех
@@ -838,7 +850,7 @@
         if (error) throw error;
 
         closeCancelBreakModal();
-        await renderTimeGrid(activeActionChannel); // Мгновенно обновляем сетку
+        await renderTimeGrid(activeActionChannel); // Мгновенно обновляем сетку времени
       } catch (err) {
         alert("Не удалось освободить слот: " + err.message);
       }
