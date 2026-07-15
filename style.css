@@ -180,3 +180,223 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* ==================== АДМИН ПАНЕЛЬ ==================== */
+.admin-wrapper {
+  width: 100%;
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 0 20px;
+  height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+}
+
+/* Верхний блок управления админа */
+.admin-card {
+  background: var(--card-sea);
+  border: 1px solid var(--border-sea);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.admin-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.admin-user-badge {
+  color: var(--text-white);
+}
+.admin-user-badge span {
+  color: var(--accent-neon);
+}
+
+.admin-logout-btn {
+  background: rgba(255, 77, 77, 0.1);
+  color: #ff4d4d;
+  border: 1px solid rgba(255, 77, 77, 0.3);
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.admin-logout-btn:hover {
+  background: #ff4d4d;
+  color: #ffffff;
+}
+
+/* Вкладки переключения мониторов */
+.monitor-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mon-tab {
+  background: var(--input-bg);
+  color: var(--text-gray);
+  border: 1px solid var(--border-sea);
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.mon-tab:hover {
+  color: var(--text-white);
+  border-color: var(--accent-neon);
+}
+.mon-tab.active {
+  background: var(--accent-neon);
+  color: #0a1128;
+  border-color: var(--accent-neon);
+  box-shadow: 0 0 12px rgba(0, 180, 216, 0.3);
+}
+
+/* Кнопки дополнительных действий */
+.admin-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 15px;
+  border-top: 1px dashed var(--border-sea);
+}
+
+.action-btn {
+  background: var(--input-bg);
+  color: var(--text-white);
+  border: 1px solid var(--border-sea);
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.action-btn:hover {
+  background: var(--border-sea);
+  border-color: var(--accent-neon);
+}
+
+/* Сетка основного мониторинга */
+.monitoring-container {
+  background: var(--card-sea);
+  border: 1px solid var(--border-sea);
+  border-radius: 14px;
+  padding: 24px;
+  flex-grow: 1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+}
+
+.monitoring-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 20px;
+  color: var(--text-white);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-sea);
+  padding-bottom: 10px;
+}
+.monitoring-title span {
+  color: var(--accent-neon);
+}
+
+/* Табличная часть */
+.mon-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.mon-table th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--text-gray);
+  padding: 10px 14px;
+  letter-spacing: 1px;
+}
+
+.mon-row {
+  border-bottom: 1px solid rgba(31, 64, 104, 0.3);
+  transition: background-color 0.2s ease;
+}
+.mon-row:hover {
+  background: rgba(0, 180, 216, 0.02);
+}
+
+.mon-cell-operator {
+  padding: 14px;
+  width: 200px;
+}
+
+.operator-id {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-white);
+}
+
+.operator-time-info {
+  font-size: 11px;
+  color: var(--text-gray);
+  margin-top: 4px;
+}
+
+.mon-cell-slots {
+  padding: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Стильные мини-теги интервалов в окне управления админа */
+.adm-int-tag {
+  display: inline-flex;
+  align-items: center;
+  background: var(--input-bg);
+  color: var(--text-white);
+  border: 1px solid var(--border-sea);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Эффект при наведении — тег загорается красным, предупреждая об удалении */
+.adm-int-tag:hover {
+  border-color: #ff4d4d;
+  background: rgba(255, 77, 77, 0.08);
+  color: #ff4d4d;
+  transform: translateY(-1px);
+}
+
+/* Кнопка удаления строки оператора целиком */
+.reset-row-btn {
+  background: none;
+  border: none;
+  color: var(--text-gray);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 10px;
+  transition: color 0.2s ease;
+}
+.reset-row-btn:hover {
+  color: #ff4d4d;
+}
