@@ -117,7 +117,7 @@
     async function handleLogin() {
       const errorBlock = document.getElementById('errorBlock');
       errorBlock.style.display = 'none';
-      const inputUser = document.getElementById('username').value.trim().toLowerCase();
+      const inputUser = document.getElementById('username').value.trim();
       const inputPass = document.getElementById('password').value.trim();
 
       if (!inputUser || !inputPass) {
@@ -137,17 +137,26 @@
         }
 
         console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
+        
+        // Надежно прячем окно входа для всех типов пользователей
         document.getElementById('authBox').style.display = 'none';
 
+        // Если вошел администратор — открываем админку
         if (user.role === 'admin') {
           document.getElementById('admUserId').innerText = user.username;
           document.getElementById('adminDashboard').style.display = 'flex';
           return;
         }
 
-        if (currentProject === 'breaks') { startBreaksProject(user); } 
-        else { startIdProject(user); }
-      } catch (err) { showError("Ошибка подключения: " + err.message); }
+        // Если вошел обычный оператор — запускаем проект перерывов или ИД
+        if (currentProject === 'breaks') { 
+          startBreaksProject(user); 
+        } else { 
+          startIdProject(user); 
+        }
+      } catch (err) { 
+        showError("Ошибка подключения: " + err.message); 
+      }
     }
 
     function showError(text) {
@@ -158,6 +167,11 @@
 
     function startBreaksProject(user) {
       window.currentUser = user; 
+      
+      // НАДЕЖНОСТЬ: Принудительно прячем форму авторизации, если она не скрылась
+      document.getElementById('authBox').style.display = 'none';
+      
+      // Показываем блок выбора каналов связи
       document.getElementById('channelBox').style.display = 'block';
     }
 
