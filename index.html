@@ -155,6 +155,35 @@
     </div>
 
   </div> <!-- Этот тег намертво закрывает весь блок adminDashboard -->
+  <!-- МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ВЫХОДА / ОТМЕНЫ ПЕРЕРЫВА (скрыто на старте) -->
+  <div id="breakActionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 8, 20, 0.85); z-index: 150; justify-content: center; align-items: center; backdrop-filter: blur(4px); animation: fadeIn 0.2s ease;">
+    <div class="admin-card" style="width: 100%; max-width: 400px; padding: 25px; box-shadow: 0 15px 40px rgba(0,0,0,0.5); text-align: center;">
+      
+      <div style="font-size: 14px; font-weight: 700; color: var(--text-gray); margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;">Управление слотом</div>
+      
+      <!-- Крупный вывод времени и длительности -->
+      <div style="font-size: 26px; font-weight: 800; color: var(--accent-neon); margin-bottom: 10px;" id="actionModalTimeDisplay">00:00-00:00</div>
+      <div style="font-size: 14px; color: var(--text-gray); margin-bottom: 25px;" id="actionModalDurationDisplay">(00 мин)</div>
+      
+      <div style="font-size: 15px; font-weight: 600; margin-bottom: 25px; color: var(--text-white);">Выйти на перерыв сейчас?</div>
+      
+      <!-- Кнопки ДА / НЕТ -->
+      <div style="display: flex; gap: 15px;">
+        <button style="flex: 1; background: var(--accent-neon); color: #0a1128; border: none; padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="processOperatorConfirmBreak()">
+          ДА
+        </button>
+        <button style="flex: 1; background: var(--input-bg); color: var(--text-white); border: 1px solid var(--border-sea); padding: 12px; font-size: 14px; font-weight: 700; border-radius: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--border-sea)'" onmouseout="this.style.background='var(--input-bg)'" onclick="closeCancelBreakModal()">
+          НЕТ
+        </button>
+      </div>
+
+      <!-- Кнопка удаления брони (если оператор передумал отдыхать в это время) -->
+      <button style="width: 100%; background: none; border: none; color: #ff4d4d; font-size: 12px; font-weight: 700; cursor: pointer; margin-top: 20px; text-decoration: underline; opacity: 0.7;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'" onclick="processOperatorDeleteBooking()">
+        Удалить бронь (освободить слот)
+      </button>
+
+    </div>
+  </div>
 
   <script>
     if (!window.supabaseInstance) {
@@ -347,25 +376,43 @@
           return;
         }
 
-        // 3. Распределяем интервалы по колонкам с учётом их живого статуса занятости
+              // 3. Распределяем интервалы по колонкам с учётом их живого статуса занятости
         slots.forEach(slot => {
           const btn = document.createElement('button');
           btn.innerText = slot.slot_time;
 
-          // Проверяем, есть ли этот временной интервал в нашей карте занятости
+          // Проверяем, занят ли этот интервал кем-то в базе
           const existingBooking = bookingsMap[slot.slot_time];
 
           if (!existingBooking) {
             // Сценарий А: Слот абсолютно свободен
             btn.className = 'slot-item-btn free';
             btn.onclick = () => handleSlotBooking(slot.slot_time, channel, btn);
-          } else if (existingBooking.username === window.currentUser.username) {
+          } 
+          else if (existingBooking.username === window.currentUser.username) {
             // Сценарий Б: Слот забронирован ТЕКУЩИМ вошедшим оператором
             btn.className = 'slot-item-btn my-booking';
             btn.innerHTML = `${slot.slot_time} <span class="busy-by" style="background:var(--accent-neon); color:#0a1128;">МОЙ</span>`;
-            // По клику на свой слот добавим позже функцию отмены бронирования
-            btn.onclick = () => alert("Вы уже заняли это время! Логику отмены прикрутим следующим шагом.");
-          } else {
+            
+            // --- ЭТАП 2: КЛОНИРУЕМ ТЕГ НАВЕРХ В ШАПКУ («МОЙ ПЛАН НА ДЕНЬ») ---
+            const planContainer = document.getElementById('operatorMyPlan');
+            if (planContainer) {
+              // Если это первая загрузка и там горит пустота — очистим контейнер
+              if (planContainer.innerHTML.includes('<!--')) planContainer.innerHTML = '';
+              
+              const planTag = document.createElement('div');
+              planTag.className = 'user-plan-tag';
+              planTag.innerText = slot.slot_time;
+              
+              // Привязываем вызов модалки отмены перерыва по клику на тег в шапке
+              planTag.onclick = () => openCancelBreakModal(slot.slot_time, slot.type, channel);
+              planContainer.appendChild(planTag);
+            }
+
+            // По клику на саму большую кнопку в сетке тоже будем открывать это же окно отмены
+            btn.onclick = () => openCancelBreakModal(slot.slot_time, slot.type, channel);
+          } 
+          else {
             // Сценарий В: Слот занят кем-то другим
             btn.className = 'slot-item-btn busy';
             btn.innerHTML = `${slot.slot_time} <span class="busy-by">Занят: ${existingBooking.username}</span>`;
@@ -741,7 +788,62 @@
         await fetchAndRenderAdminMonitor(channel); // Обновляем экран админа
       } catch (err) { alert("Не удалось сбросить оператора: " + err.message); }
     }
+    // Глобальные переменные для хранения данных активного кликнутого слота
+    let activeActionSlotTime = '';
+    let activeActionSlotType = '';
+    let activeActionChannel = '';
 
+    // Функция открытия модалки управления своим слотом
+    function openCancelBreakModal(slotTime, type, channel) {
+      activeActionSlotTime = slotTime;
+      activeActionSlotType = type;
+      activeActionChannel = channel;
+
+      // Рассчитываем длительность для вывода в скобках
+      let durationText = '(15 мин)';
+      if (type === 'mid') durationText = '(20 мин)';
+      else if (type === 'lunch') durationText = channel === 'HL' ? '(30 -мин)' : '(40 мин)';
+      else if (type === 'short' && channel === 'HL') durationText = '(10 мин)';
+
+      // Выводим данные в модалку
+      document.getElementById('actionModalTimeDisplay').innerText = slotTime;
+      document.getElementById('actionModalDurationDisplay').innerText = durationText;
+
+      // Показываем окно
+      document.getElementById('breakActionModal').style.display = 'flex';
+    }
+
+    // Функция закрытия модалки
+    function closeCancelBreakModal() {
+      document.getElementById('breakActionModal').style.display = 'none';
+    }
+
+    // Логика кнопки "Удалить бронь": полностью освобождает слот для всех
+    async function processOperatorDeleteBooking() {
+      if (!confirm(`Освободить слот ${activeActionSlotTime} и удалить его из вашего плана?`)) return;
+      
+      try {
+        const { error } = await db
+          .from('bookings')
+          .delete()
+          .eq('slot_time', activeActionSlotTime)
+          .eq('username', window.currentUser.username)
+          .eq('channel', activeActionChannel);
+
+        if (error) throw error;
+
+        closeCancelBreakModal();
+        await renderTimeGrid(activeActionChannel); // Мгновенно обновляем сетку
+      } catch (err) {
+        alert("Не удалось освободить слот: " + err.message);
+      }
+    }
+    
+    // Заглушка для будущей кнопки "ДА" (запуск таймера — напишем на следующем этапе)
+    function processOperatorConfirmBreak() {
+      closeCancelBreakModal();
+      alert("На следующем этапе здесь запустится блокировка экрана и обратный отсчет!");
+    }
   </script>
     <!-- ПОЛНОЭКРАННЫЙ ТАЙМЕР АКТИВНОГО ПЕРЕРЫВА (скрыт на старте) -->
   <div id="activeBreakOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 8, 20, 0.95); z-index: 200; justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease;">
