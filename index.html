@@ -226,14 +226,14 @@
       renderTimeGrid(channelType);
     }
 
-    // Главная функция генерации сетки расписания для оператора
+    // Главная функция генерации сетки расписания для оператора (с живым сопоставлением броней)
     async function renderTimeGrid(channel) {
       document.body.innerHTML = '';
       
       const wrapper = document.createElement('div');
       wrapper.className = 'grid-wrapper';
       
-      let channelName = channel === 'HL' ? 'ГОРЯЧАЯ ЛИНИЯ' : (channel === 'LIVE' ? 'ЧАТ LIVETEX' : 'ЧАТ LIVETEX НОЧЬ');
+      let channelName = channel === 'HL' ? 'ГОРЯЧАЯ LИНИЯ' : (channel === 'LIVE' ? 'ЧАТ LIVETEX' : 'ЧАТ LIVETEX НОЧЬ');
       let lunchDuration = channel === 'HL' ? '30 МИН' : '40 МИН';
       
       wrapper.innerHTML = `
@@ -248,13 +248,13 @@
         </div>
         
         <div class="grid-columns-container">
-          <!-- Колонка 1: Короткие перерывы -->
+          <!-- Колонка 1 -->
           <div class="grid-column">
             <h4 class="col-title">ПЕРЕРЫВЫ ${channel === 'HL' ? '10 МИН' : '15 МИН'}</h4>
             <div class="slots-box" id="shortBreaksBox"><div style="color:var(--text-gray); text-align:center; padding:20px;">Загрузка...</div></div>
           </div>
           
-          <!-- Колонка 2: Только для LIVE и NIGHT (20 минут) -->
+          <!-- Колонка 2 -->
           ${channel !== 'HL' ? `
           <div class="grid-column">
             <h4 class="col-title">ПЕРЕРЫВЫ 20 МИН</h4>
@@ -262,7 +262,7 @@
           </div>
           ` : ''}
           
-          <!-- Колонка 3: Обеды -->
+          <!-- Колонка 3 -->
           <div class="grid-column">
             <h4 class="col-title">ОБЕДЫ (${lunchDuration})</h4>
             <div class="slots-box" id="lunchesBox"><div style="color:var(--text-gray); text-align:center; padding:20px;">Загрузка...</div></div>
@@ -273,20 +273,35 @@
       document.body.appendChild(wrapper);
 
       try {
-        // Запрашиваем из Supabase все интервалы, которые относятся к ВЫБРАННОМУ каналу
-        const { data: slots, error } = await db
+        // 1. ПАРАЛЛЕЛЬНЫЙ ЗАПРОС №1: Запрашиваем из Supabase все доступные интервалы (шаблоны)
+        const { data: slots, error: slotsError } = await db
           .from('time_slots')
           .select('slot_time, type')
+          .eq('channel', channel)
+          .order('slot_time', { ascending: true });
+
+        if (slotsError) throw slotsError;
+
+        // 2. ПАРАЛЛЕЛЬНЫЙ ЗАПРОС №2: Запрашиваем текущие бронирования из таблицы bookings за сегодня
+        const { data: activeBookings, error: bookingsError } = await db
+          .from('bookings')
+          .select('slot_time, username, status')
           .eq('channel', channel);
 
-        if (error) throw error;
+        if (bookingsError) throw bookingsError;
 
-        // Находим контейнеры колонок на странице
+        // Переводим массив броней в удобный объект (карту занятости) для мгновенного поиска по времени
+        const bookingsMap = {};
+        if (activeBookings) {
+          activeBookings.forEach(b => {
+            bookingsMap[b.slot_time] = b;
+          });
+        }
+
         const shortBox = document.getElementById('shortBreaksBox');
         const midBox = document.getElementById('midBreaksBox');
         const lunchBox = document.getElementById('lunchesBox');
 
-        // Очищаем надписи "Загрузка..." перед выводом кнопок
         if (shortBox) shortBox.innerHTML = '';
         if (midBox) midBox.innerHTML = '';
         if (lunchBox) lunchBox.innerHTML = '';
@@ -299,18 +314,32 @@
           return;
         }
 
-        // Бежим по массиву полученных из базы слотов и распределяем их по колонкам
+        // 3. Распределяем интервалы по колонкам с учётом их живого статуса занятости
         slots.forEach(slot => {
-          // Создаем красивую кнопку для каждого интервала
           const btn = document.createElement('button');
-          btn.className = 'slot-item-btn free'; 
           btn.innerText = slot.slot_time;
-          
-          // Привязываем живую функцию бронирования по клику
-          btn.onclick = () => handleSlotBooking(slot.slot_time, channel, btn);
 
+          // Проверяем, есть ли этот временной интервал в нашей карте занятости
+          const existingBooking = bookingsMap[slot.slot_time];
 
-          // Раскидываем кнопки по ID контейнеров в зависимости от типа 'short', 'mid', 'lunch'
+          if (!existingBooking) {
+            // Сценарий А: Слот абсолютно свободен
+            btn.className = 'slot-item-btn free';
+            btn.onclick = () => handleSlotBooking(slot.slot_time, channel, btn);
+          } else if (existingBooking.username === window.currentUser.username) {
+            // Сценарий Б: Слот забронирован ТЕКУЩИМ вошедшим оператором
+            btn.className = 'slot-item-btn my-booking';
+            btn.innerHTML = `${slot.slot_time} <span class="busy-by" style="background:var(--accent-neon); color:#0a1128;">МОЙ</span>`;
+            // По клику на свой слот добавим позже функцию отмены бронирования
+            btn.onclick = () => alert("Вы уже заняли это время! Логику отмены прикрутим следующим шагом.");
+          } else {
+            // Сценарий В: Слот занят кем-то другим
+            btn.className = 'slot-item-btn busy';
+            btn.innerHTML = `${slot.slot_time} <span class="busy-by">Занят: ${existingBooking.username}</span>`;
+            btn.onclick = null; // Полностью отключаем кликабельность кнопки
+          }
+
+          // Раскладываем готовую кнопку по контейнерам
           if (slot.type === 'short' && shortBox) {
             shortBox.appendChild(btn);
           } else if (slot.type === 'mid' && midBox) {
@@ -321,7 +350,7 @@
         });
 
       } catch (err) {
-        alert("Ошибка загрузки расписания из базы: " + err.message);
+        alert("Ошибка загрузки актуального расписания: " + err.message);
       }
     }
 
