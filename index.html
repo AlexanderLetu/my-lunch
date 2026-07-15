@@ -844,15 +844,12 @@
       }
     }
     
-    // Глобальная переменная для хранения работающего интервала таймера
     let countdownIntervalId = null;
 
-    // Кнопка "ДА" — запускает режим активного перерыва оператора
+    // Кнопка "ДА" — переключает статус в ACTIVE и запускает таймер
     async function processOperatorConfirmBreak() {
       closeCancelBreakModal();
-      
       try {
-        // 1. Меняем статус этой брони в Supabase на ACTIVE (вышел на перерыв)
         const { error } = await db
           .from('bookings')
           .update({ status: 'ACTIVE' })
@@ -861,59 +858,90 @@
           .eq('channel', activeActionChannel);
 
         if (error) throw error;
-
-        // 2. Запускаем локальный обратный отсчет времени для этого слота
+        
+        // Запускаем тиканье таймера
         startCountdownTimerLogic(activeActionSlotTime);
-
-      } catch (err) {
-        alert("Не удалось запустить перерыв: " + err.message);
+      } catch (err) { 
+        alert("Не удалось запустить перерыв: " + err.message); 
       }
     }
 
-    // Функция расчета минут и запуска секундного таймера на экране
+    // Математический расчет секунд и минут (Локально в браузере)
     function startCountdownTimerLogic(slotTime) {
-      // Парсим время окончания слота (например, из "10:10-10:20" вытаскиваем "10:20")
-      const endTimeString = slotTime.split('-')[1]; 
+      const times = slotTime.split('-');
+      const endTimeString = times[1]; // Берём время окончания (например, "10:20")
       const [endHours, endMinutes] = endTimeString.split(':').map(Number);
-
+      
       const overlay = document.getElementById('activeBreakOverlay');
       const display = document.getElementById('countdownTimerDisplay');
       
-      // Показываем полноэкранный темный блок, блокируя интерфейс
-      overlay.style.display = 'flex';
-
-      // Очищаем старый таймер, если он случайно работал
+      if (overlay) overlay.style.display = 'flex';
       if (countdownIntervalId) clearInterval(countdownIntervalId);
 
-      // Запускаем ежесекундный цикл пересчета внутри браузера (0 запросов к базе!)
+      // Локальный ежесекундный цикл пересчета без нагрузки на Supabase
       countdownIntervalId = setInterval(() => {
         const now = new Date();
-        
-        // Создаем объект целевого времени окончания перерыва (сегодня)
         const targetTime = new Date();
         targetTime.setHours(endHours, endMinutes, 0, 0);
-
-        // Считаем разницу в миллисекундах между "сейчас" и "концом перерыва"
+        
         const diff = targetTime - now;
 
-        // Если время вышло — автоматически завершаем перерыв
+        // Если время вышло — финишируем автоматикой
         if (diff <= 0) {
           clearInterval(countdownIntervalId);
           autoCompleteActiveBreak();
           return;
         }
 
-        // Переводим миллисекунды в привычные Минуты и Секунды
         const minutes = Math.floor(diff / 1000 / 60);
         const seconds = Math.floor((diff / 1000) % 60);
-
-        // Красиво форматируем числа, чтобы всегда было две цифры (например, "09:05")
-        const displayMin = String(minutes).padStart(2, '0');
-        const displaySec = String(seconds).padStart(2, '0');
-
-        display.innerText = `${displayMin}:${displaySec}`;
+        
+        if (display) {
+          display.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
       }, 1000);
     }
+    // Функция автоматического завершения перерыва, когда таймер дошел до 00:00
+    async function autoCompleteActiveBreak() {
+      if (countdownIntervalId) clearInterval(countdownIntervalId);
+      const overlay = document.getElementById('activeBreakOverlay');
+      if (overlay) overlay.style.display = 'none';
+      
+      try {
+        await db
+          .from('bookings')
+          .update({ status: 'COMPLETED' })
+          .eq('slot_time', activeActionSlotTime)
+          .eq('username', window.currentUser.username);
+
+        alert("⏰ Время вашего перерыва истекло! Возвращайтесь к работе.");
+        await renderTimeGrid(activeActionChannel);
+      } catch (err) { 
+        console.error("Ошибка автозавершения: ", err); 
+      }
+    }
+
+    // Функция ручного досрочного завершения перерыва по кнопке "ЗАВЕРШИТЬ"
+    async function handleEarlyCompleteBreak() {
+      if (!confirm("Вы действительно хотите завершить перерыв досрочно и вернуться на линию?")) return;
+      
+      if (countdownIntervalId) clearInterval(countdownIntervalId);
+      const overlay = document.getElementById('activeBreakOverlay');
+      if (overlay) overlay.style.display = 'none';
+
+      try {
+        await db
+          .from('bookings')
+          .update({ status: 'COMPLETED' })
+          .eq('slot_time', activeActionSlotTime)
+          .eq('username', window.currentUser.username);
+
+        await renderTimeGrid(activeActionChannel);
+      } catch (err) { 
+        alert("Не удалось завершить перерыв: " + err.message); 
+      }
+    }
+
 
     // Функция, которая срабатывает, когда таймер дошел до 00:00
     async function autoCompleteActiveBreak() {
@@ -953,14 +981,6 @@
     }
 
   </script>
-    <!-- ПОЛНОЭКРАННЫЙ ТАЙМЕР АКТИВНОГО ПЕРЕРЫВА (скрыт на старте) -->
-  <div id="activeBreakOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(4, 8, 20, 0.95); z-index: 200; justify-content: center; align-items: center; flex-direction: column; backdrop-filter: blur(8px); animation: fadeIn 0.3s ease;">
-    <div style="font-size: 14px; font-weight: 700; color: var(--accent-neon); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px;">ПЕРЕРЫВ</div>
-    <div id="countdownTimerDisplay" style="font-size: 80px; font-weight: 800; color: #ff007f; text-shadow: 0 0 20px rgba(255, 0, 127, 0.4); font-family: monospace; margin-bottom: 30px; letter-spacing: 2px;">00:00</div>
-    <button style="background: #ff007f; color: #ffffff; border: none; padding: 12px 30px; font-size: 14px; font-weight: 700; border-radius: 8px; cursor: pointer; box-shadow: 0 0 15px rgba(255, 0, 127, 0.3); transition: all 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'" onclick="handleEarlyCompleteBreak()">
-      ЗАВЕРШИТЬ
-    </button>
-  </div>
 
 </body>
 </html>
