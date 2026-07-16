@@ -758,19 +758,19 @@
         // ПРОВЕРКА НА АКТИВНЫЙ ТАЙМЕР: Проверяем, не сидит ли юзер на перерыве прямо сейчас
         const { data: checkActive, error: activeErr } = await db
           .from('bookings')
-          .select('slot_time')
+          .select('slot_time, created_at')
           .eq('username', window.currentUser.username)
           .eq('status', 'ACTIVE')
           .maybeSingle();
 
         if (!activeErr && checkActive) {
-          // Если нашли активный статус — намертво разворачиваем экран таймера обратно!
           activeActionSlotTime = checkActive.slot_time;
           activeActionChannel = channel;
-          startCountdownTimerLogic(checkActive.slot_time);
+          
+          // Передаем в таймер зафиксированное в базе время реального старта смены
+          startCountdownTimerLogic(checkActive.slot_time, checkActive.created_at);
           return;
         }
-
         // Группируем бронирования по операторам (с защитой от пустых полей в базе)
         const operatorGroups = {};
         bookings.forEach(b => {
@@ -913,58 +913,81 @@
     
     let countdownIntervalId = null;
 
-    // Кнопка "ДА" — переключает статус в ACTIVE и запускает таймер
+    // Кнопка "ДА" — фиксирует точное время старта перерыва в базу
     async function processOperatorConfirmBreak() {
       closeCancelBreakModal();
       try {
+        // Записываем в базу время старта, чтобы при перезагрузке (F5) таймер не сбрасывался
+        const startTimeDb = new Date().toISOString();
         const { error } = await db
           .from('bookings')
-          .update({ status: 'ACTIVE' })
+          .update({ status: 'ACTIVE', created_at: startTimeDb })
           .eq('slot_time', activeActionSlotTime)
           .eq('username', window.currentUser.username)
           .eq('channel', activeActionChannel);
 
         if (error) throw error;
         
-        // Запускаем тиканье таймера
-        startCountdownTimerLogic(activeActionSlotTime);
+        // Запускаем отсчет, передавая время слота и время старта (сейчас)
+        startCountdownTimerLogic(activeActionSlotTime, new Date());
       } catch (err) { 
         alert("Не удалось запустить перерыв: " + err.message); 
       }
     }
 
-    // Математический расчет секунд и минут (Локально в браузере)
-    function startCountdownTimerLogic(slotTime) {
-      const times = slotTime.split('-');
-      const endTimeString = times[1] ? times[1].trim() : times[0].trim(); 
-      const [endHours, endMinutes] = endTimeString.split(':').map(Number);
-      
+    // Интеллектуальная функция вычисления интервала и ведения таймера
+    function startCountdownTimerLogic(slotTime, startTimeValue) {
+      if (!slotTime) return;
+
+      // 1. ВЫЧИСЛЯЕМ ДЛИТЕЛЬНОСТЬ СЛОТА: парсим "10:00-10:10"
+      const parts = slotTime.split('-');
+      if (parts.length !== 2) return;
+
+      const [startH, startM] = parts[0].split(':').map(Number);
+      const [endH, endM] = parts[1].split(':').map(Number);
+
+      // Переводим всё в чистые минуты от начала дня
+      const startTotalMinutes = startH * 60 + startM;
+      let endTotalMinutes = endH * 60 + endM;
+
+      // Страховка на случай перехода через полночь (например, 23:45-00:15)
+      if (endTotalMinutes < startTotalMinutes) {
+        endTotalMinutes += 24 * 60;
+      }
+
+      // Чистая длительность перерыва в минутах (например, 10, 15, 30 или 40)
+      const slotDurationMinutes = endTotalMinutes - startTotalMinutes;
+      const totalBreakSeconds = slotDurationMinutes * 60;
+
       const overlay = document.getElementById('activeBreakOverlay');
       const display = document.getElementById('countdownTimerDisplay');
       
       if (overlay) overlay.style.display = 'flex';
       if (countdownIntervalId) clearInterval(countdownIntervalId);
 
-      // Локальный ежесекундный цикл пересчета без нагрузки на Supabase
+      // Считаем, сколько времени УЖЕ прошло с момента старта перерыва
+      const startTime = new Date(startTimeValue);
+
       countdownIntervalId = setInterval(() => {
         const now = new Date();
-        const targetTime = new Date();
-        targetTime.setHours(endHours, endMinutes, 0, 0);
-        
-        const diff = targetTime - now;
+        const secondsPassed = Math.floor((now - startTime) / 1000);
 
-        // Если время вышло — финишируем автоматикой
-        if (diff <= 0) {
+        // Сколько секунд ОСТАЛОСЬ отгулять
+        const secondsLeft = totalBreakSeconds - secondsPassed;
+
+        // Если время вышло — финишируем
+        if (secondsLeft <= 0) {
           clearInterval(countdownIntervalId);
           autoCompleteActiveBreak();
           return;
         }
 
-        const minutes = Math.floor(diff / 1000 / 60);
-        const seconds = Math.floor((diff / 1000) % 60);
-        
+        // Переводим оставшиеся секунды в красивый минутный формат на экране
+        const displayMin = Math.floor(secondsLeft / 60);
+        const displaySec = secondsLeft % 60;
+
         if (display) {
-          display.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+          display.innerText = `${String(displayMin).padStart(2, '0')}:${String(displaySec).padStart(2, '0')}`;
         }
       }, 1000);
     }
