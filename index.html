@@ -390,6 +390,17 @@
       document.body.appendChild(wrapper);
 
       try {
+         // ПРОВЕРКА НА АКТИВНЫЙ ТАЙМЕР С УЧЕТОМ АВТОСБРОСА
+        const resetTime = getResetTimestamp(channel);
+        const { data: checkActive, error: activeErr } = await db
+          .from('bookings')
+          .select('slot_time, created_at')
+          .eq('username', window.currentUser.username)
+          .eq('status', 'ACTIVE')
+          .eq('channel', channel) // Ищем строго в текущем канале
+          .gte('created_at', resetTime) // Фильтр автосброса!
+          .maybeSingle();
+
         // 1. ПАРАЛЛЕЛЬНЫЙ ЗАПРОС №1: Запрашиваем из Supabase все доступные интервалы (шаблоны)
         const { data: slots, error: slotsError } = await db
           .from('time_slots')
@@ -403,7 +414,8 @@
         const { data: activeBookings, error: bookingsError } = await db
           .from('bookings')
           .select('slot_time, username, status')
-          .eq('channel', channel);
+          .eq('channel', channel)
+          .gte('created_at', resetTime); // Сама магия автосброса по времени МСК
 
         if (bookingsError) throw bookingsError;
 
@@ -775,11 +787,15 @@
       tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">Синхронизация данных с Supabase...</td></tr>';
 
       try {
-        // Запрашиваем из лога bookings ВСЕ активные брони для выбранного канала
+        // Вычисляем точку автосброса для админки
+        const resetTime = getResetTimestamp(channel);
+
+        // Запрашиваем из лога bookings ВСЕ брони строго с момента последнего автосброса!
         const { data: bookings, error } = await db
           .from('bookings')
           .select('id, slot_time, username, status')
-          .eq('channel', channel);
+          .eq('channel', channel)
+          .gte('created_at', resetTime); // Фильтр автосброса!
 
         if (error) throw error;
         tbody.innerHTML = '';
@@ -1139,6 +1155,39 @@
       } catch (err) { 
         alert("Не удалось завершить перерыв: " + err.message); 
       }
+    }
+    // Функция расчета точной временной метки (ISO UTC) последнего автосброса смены
+    function getResetTimestamp(channel) {
+      // 1. Получаем текущее время в часовом поясе МСК (Москва)
+      const now = new Date();
+      const mskTimeString = now.toLocaleString("en-US", { timeZone: "Europe/Moscow" });
+      const mskDate = new Date(mskTimeString);
+
+      // Получаем текущие дату/время по Москве
+      const year = mskDate.getFullYear();
+      const month = mskDate.getMonth();
+      const day = mskDate.getDate();
+      const hours = mskDate.getHours();
+      const minutes = mskDate.getMinutes();
+
+      // 2. Задаем часы и минуты сброса для каждого канала (по МСК)
+      let resetH = 19, resetM = 30; // По умолчанию HL (19:30)
+      if (channel === 'LIVE') { resetH = 21; resetM = 30; }
+      else if (channel === 'NIGHT') { resetH = 9; resetM = 30; }
+
+      // 3. Строим точку сброса на СЕГОДНЯШНИЙ день по Москве
+      const targetResetMsk = new Date(year, month, day, resetH, resetM, 0, 0);
+
+      // 4. Сравниваем: если текущее время МСК МЕНЬШЕ точки сброса, 
+      // значит последний сброс был ВЧЕРА в это же время
+      if (mskDate < targetResetMsk) {
+        targetResetMsk.setDate(targetResetMsk.getDate() - 1);
+      }
+
+      // 5. Переводим полученную московскую дату сброса обратно в системный UTC ISO формат для Supabase
+      // Вычитаем 3 часа (разница МСК и UTC), чтобы база данных поняла запрос правильно
+      const utcTimestamp = new Date(targetResetMsk.getTime() - (3 * 60 * 60 * 1000));
+      return utcTimestamp.toISOString();
     }
 
   </script>
