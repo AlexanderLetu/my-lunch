@@ -256,6 +256,7 @@
       }
     });
 
+// Полностью заменяем старуюhandleLogin на эту версию с живым запросом к Supabase
 async function handleLogin() {
   const uInput = document.getElementById('username').value.trim();
   const pInput = document.getElementById('password').value.trim();
@@ -267,34 +268,35 @@ async function handleLogin() {
   }
 
   try {
-    // Делаем реальный запрос в Supabase в таблицу пользователей
-    // (Убедитесь, что имя таблицы совпадает с вашей структурой, например 'users' или 'profiles')
+    // 1. Стучимся в Supabase в таблицу 'users', которую мы видим на скриншоте
     const { data: user, error } = await db
       .from('users') 
       .select('username, password, role')
       .eq('username', uInput)
-      .maybeSingle(); // Возвращает один объект или null
+      .maybeSingle(); // Возвращает объект пользователя или null, если не найден
 
     if (error) throw error;
 
-    // Проверяем, существует ли пользователь и совпадает ли пароль
+    // 2. Проверяем, существует ли пользователь и совпадает ли его пароль
     if (!user || user.password !== pInput) {
       showError('Неверный логин или пароль');
       return;
     }
     
-    // Скрываем ошибку при успехе
+    // Очищаем блок ошибок, если всё ввели правильно
     if (errorBlock) errorBlock.style.display = 'none';
 
-    // Сохраняем сессию в память браузера для защиты от F5
+    // 3. Сохраняем сессию в локальную память браузера для защиты от перезагрузки страницы (F5)
     localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
     
-    // Запускаем экраны сайта в зависимости от роли (admin или operator)
+    console.log(`🔑 Успешный вход! Роль: ${user.role}`);
+    
+    // 4. Передаем управление функции разделения экранов
     activateUserSession(user);
 
   } catch (err) {
-    console.error("Ошибка при авторизации:", err);
-    showError('Ошибка сети или базы данных: ' + err.message);
+    console.error("Критическая ошибка авторизации:", err);
+    showError('Ошибка подключения: ' + err.message);
   }
 }
 
