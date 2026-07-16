@@ -587,3 +587,37 @@ body {
   box-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
   transform: translateY(-1px);
 }
+/* Состояние: Перерыв активен прямо сейчас (Пульсация) */
+.adm-int-tag.status-active {
+  background: rgba(255, 0, 127, 0.2) !important;
+  border-color: #ff007f !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(255, 0, 127, 0.4);
+  animation: adminTagPulse 2s infinite ease-in-out;
+}
+
+/* Состояние: Перерыв завершен (Перечёркивание и прозрачность) */
+.adm-int-tag.status-completed {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-color: #333333 !important;
+  color: #555555 !important;
+  text-decoration: line-through; /* Перечёркивание текста */
+  box-shadow: none !important;
+  cursor: not-allowed;
+}
+
+/* Анимация плавного неонового дыхания */
+@keyframes adminTagPulse {
+  0% {
+    opacity: 0.8;
+    box-shadow: 0 0 4px rgba(255, 0, 127, 0.2);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px rgba(255, 0, 127, 0.6);
+  }
+  100% {
+    opacity: 0.8;
+    box-shadow: 0 0 4px rgba(255, 0, 127, 0.2);
+  }
+}
