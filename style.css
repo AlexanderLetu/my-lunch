@@ -621,3 +621,12 @@ body {
     box-shadow: 0 0 4px rgba(255, 0, 127, 0.2);
   }
 }
+/* Состояние: Мой перерыв успешно завершен (для экрана оператора) */
+.slot-item-btn.my-completed {
+  background: rgba(255, 255, 255, 0.01) !important;
+  border-color: #222222 !important;
+  color: #444444 !important;
+  text-decoration: line-through; /* Перечёркиваем время */
+  cursor: not-allowed; /* Курсор запрета */
+  box-shadow: none !important;
+}
