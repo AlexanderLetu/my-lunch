@@ -257,13 +257,9 @@
     });
 
 async function handleLogin() {
-  console.log("1. Функция handleLogin вызвана!");
-  
   const uInput = document.getElementById('username').value.trim();
   const pInput = document.getElementById('password').value.trim();
   const errorBlock = document.getElementById('errorBlock');
-  
-  console.log(`2. Введенный логин: "${uInput}", Введенный пароль: "${pInput}"`);
 
   if (!uInput || !pInput) {
     showError('Заполните все поля!');
@@ -271,45 +267,42 @@ async function handleLogin() {
   }
 
   try {
-    console.log("3. Отправляю запрос в Supabase...");
-    
-    // Делаем явный select без жестких ограничений, чтобы посмотреть, что возвращает база
+    // Безопасный запрос: передаем заголовок 'x-username' для проверки RLS в базе
     const { data: users, error } = await db
       .from('users') 
       .select('username, password, role')
-      .eq('username', uInput);
+      .eq('username', uInput)
+      .setHeader('x-username', uInput); // Связка с созданным правилом безопасности!
 
-    if (error) {
-      console.error("❌ Ошибка от Supabase:", error);
-      throw error;
-    }
+    if (error) throw error;
 
-    console.log("4. Ответ от базы получен. Массив найденных строк:", users);
-
+    // Если база вернула пустой массив, значит логин неверный или скрыт защитой
     if (!users || users.length === 0) {
-      console.warn("⚠️ Родовая ошибка: Пользователь с таким логином не найден в БД!");
       showError('Неверный логин или пароль');
       return;
     }
 
-    // Берем первого найденного
-    const user = users[0];
-    console.log(`5. Сопоставляю пароли. В базе: "${user.password}", Введено: "${pInput}"`);
+    const user = users[0]; // Берем совпавшего пользователя
 
+    // Проверяем пароль
     if (user.password !== pInput) {
-      console.warn("⚠️ Пароли не совпали!");
       showError('Неверный логин или пароль');
       return;
     }
     
-    console.log("6. Авторизация успешна! Переключаю экраны...");
+    // Скрываем ошибки при успешном входе
     if (errorBlock) errorBlock.style.display = 'none';
 
+    // Сохраняем сессию в локальную память браузера для защиты от F5
     localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
+    
+    console.log(`🤖 Успешная авторизация! Роль: ${user.role}`);
+    
+    // Передаем управление функции переключения экранов
     activateUserSession(user);
 
   } catch (err) {
-    console.error("🚨 Критическая ошибка внутри блока catch:", err);
+    console.error("Ошибка авторизации:", err);
     showError('Ошибка подключения: ' + err.message);
   }
 }
