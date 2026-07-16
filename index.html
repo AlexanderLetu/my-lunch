@@ -240,15 +240,13 @@
     document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
     document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
    
-    // --- ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (АВТО-ВХОД БЕЗ ОШИБОК) ---
+    // --- ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (АВТО-ВХОД) ---
     window.addEventListener('DOMContentLoaded', () => {
       const savedUserText = localStorage.getItem('my_lunch_current_user');
       if (savedUserText) {
         try {
           const savedUser = JSON.parse(savedUserText);
           console.log(`🤖 Найдена активная сессия для пользователя: ${savedUser.username}`);
-          
-          // Железно активируем сессию напрямую из сохраненной памяти браузера
           activateUserSession(savedUser);
         } catch (e) {
           localStorage.removeItem('my_lunch_current_user');
@@ -256,24 +254,44 @@
       }
     });
 
-    // Функция авторизации пользователя (ФИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ)
-    function handleLogin() {
+    // Полностью автономная функция авторизации через Supabase (без использования USERS_DB)
+    async function handleLogin() {
       const uInput = document.getElementById('username').value.trim();
       const pInput = document.getElementById('password').value.trim();
-      
-      // Ищем строго по массиву USERS_DB (как в твоем оригинальном рабочем коде)
-      const user = USERS_DB.find(u => u.username === uInput && uInput !== "");
-      
-      if (!user || user.password !== pInput) {
-        showError('Неверный логин или пароль');
+
+      if (!uInput || !pInput) {
+        showError('Заполните все поля!');
         return;
       }
-      
-      // Записываем сессию в память браузера для защиты от перезагрузки страницы (F5)
-      localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
-      
-      // Активируем экраны
-      activateUserSession(user);
+
+      try {
+        // Запрашиваем пользователя напрямую из таблицы users в Supabase
+        const { data: user, error } = await db
+          .from('users')
+          .select('username, password, role')
+          .eq('username', uInput)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        // Если такого юзера нет или пароль не совпал
+        if (!user || user.password !== pInput) {
+          showError('Неверный логин или пароль');
+          return;
+        }
+
+        // Формируем чистый объект сессии (без пароля для безопасности)
+        const sessionUser = { username: user.username, role: user.role };
+
+        // Сохраняем сессию в память браузера для защиты от F5
+        localStorage.setItem('my_lunch_current_user', JSON.stringify(sessionUser));
+        
+        // Запускаем экраны сайта
+        activateUserSession(sessionUser);
+
+      } catch (err) {
+        showError('Ошибка авторизации: ' + err.message);
+      }
     }
 
     // Новая функция разделения экранов по ролям (вынесли для удобства авто-входа)
