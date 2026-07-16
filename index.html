@@ -256,46 +256,60 @@
       }
     });
 
-// Полностью заменяем старуюhandleLogin на эту версию с живым запросом к Supabase
 async function handleLogin() {
+  console.log("1. Функция handleLogin вызвана!");
+  
   const uInput = document.getElementById('username').value.trim();
   const pInput = document.getElementById('password').value.trim();
   const errorBlock = document.getElementById('errorBlock');
   
+  console.log(`2. Введенный логин: "${uInput}", Введенный пароль: "${pInput}"`);
+
   if (!uInput || !pInput) {
     showError('Заполните все поля!');
     return;
   }
 
   try {
-    // 1. Стучимся в Supabase в таблицу 'users', которую мы видим на скриншоте
-    const { data: user, error } = await db
+    console.log("3. Отправляю запрос в Supabase...");
+    
+    // Делаем явный select без жестких ограничений, чтобы посмотреть, что возвращает база
+    const { data: users, error } = await db
       .from('users') 
       .select('username, password, role')
-      .eq('username', uInput)
-      .maybeSingle(); // Возвращает объект пользователя или null, если не найден
+      .eq('username', uInput);
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ Ошибка от Supabase:", error);
+      throw error;
+    }
 
-    // 2. Проверяем, существует ли пользователь и совпадает ли его пароль
-    if (!user || user.password !== pInput) {
+    console.log("4. Ответ от базы получен. Массив найденных строк:", users);
+
+    if (!users || users.length === 0) {
+      console.warn("⚠️ Родовая ошибка: Пользователь с таким логином не найден в БД!");
+      showError('Неверный логин или пароль');
+      return;
+    }
+
+    // Берем первого найденного
+    const user = users[0];
+    console.log(`5. Сопоставляю пароли. В базе: "${user.password}", Введено: "${pInput}"`);
+
+    if (user.password !== pInput) {
+      console.warn("⚠️ Пароли не совпали!");
       showError('Неверный логин или пароль');
       return;
     }
     
-    // Очищаем блок ошибок, если всё ввели правильно
+    console.log("6. Авторизация успешна! Переключаю экраны...");
     if (errorBlock) errorBlock.style.display = 'none';
 
-    // 3. Сохраняем сессию в локальную память браузера для защиты от перезагрузки страницы (F5)
     localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
-    
-    console.log(`🔑 Успешный вход! Роль: ${user.role}`);
-    
-    // 4. Передаем управление функции разделения экранов
     activateUserSession(user);
 
   } catch (err) {
-    console.error("Критическая ошибка авторизации:", err);
+    console.error("🚨 Критическая ошибка внутри блока catch:", err);
     showError('Ошибка подключения: ' + err.message);
   }
 }
