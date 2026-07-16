@@ -762,7 +762,7 @@
         alert("Не удалось зафиксировать бронь в логе: " + err.message);
       }
     }
-    // Функция живой загрузки данных в таблицу мониторинга админа
+    // Интеллектуальная функция загрузки данных в мониторинг админа с подсчетом минут
     async function fetchAndRenderAdminMonitor(channel) {
       const tbody = document.getElementById('monitoringTableBody');
       if (!tbody) return;
@@ -770,26 +770,23 @@
       tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">Синхронизация данных с Supabase...</td></tr>';
 
       try {
-        // ПРОВЕРКА НА АКТИВНЫЙ ТАЙМЕР: Проверяем, не сидит ли юзер на перерыве прямо сейчас
-        const { data: checkActive, error: activeErr } = await db
+        // Запрашиваем из лога bookings ВСЕ активные брони для выбранного канала
+        const { data: bookings, error } = await db
           .from('bookings')
-          .select('slot_time, created_at')
-          .eq('username', window.currentUser.username)
-          .eq('status', 'ACTIVE')
-          .maybeSingle();
+          .select('id, slot_time, username, status')
+          .eq('channel', channel);
 
-        if (!activeErr && checkActive) {
-          activeActionSlotTime = checkActive.slot_time;
-          activeActionChannel = channel;
-          
-          // Передаем в таймер зафиксированное в базе время реального старта смены
-          startCountdownTimerLogic(checkActive.slot_time, checkActive.created_at);
+        if (error) throw error;
+        tbody.innerHTML = '';
+
+        if (!bookings || bookings.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:30px; color:var(--text-gray);">В данном канале пока нет забронированных перерывов</td></tr>';
           return;
         }
-        // Группируем бронирования по операторам (с защитой от пустых полей в базе)
+
+        // Группируем бронирования по операторам (с защитой от пустых полей NULL в базе)
         const operatorGroups = {};
         bookings.forEach(b => {
-          // Если имя оператора в базе пустое, пишем 'Аноним'
           const opName = b.username ? b.username : 'Аноним'; 
           if (!operatorGroups[opName]) {
             operatorGroups[opName] = [];
@@ -797,40 +794,58 @@
           operatorGroups[opName].push(b);
         });
 
-        // Бежим по сгруппированным операторам и создаем строки таблицы
+        // Бежим по сгруппированным операторам и строим строки таблицы
         for (const operatorId in operatorGroups) {
           const userBookings = operatorGroups[operatorId];
           
-          // Сортируем интервалы оператора по времени, чтобы они шли по хронологии
+          // Сортируем интервалы оператора по хронологии часов
           userBookings.sort((a, b) => a.slot_time.localeCompare(b.slot_time));
+
+          // --- ВЫЧИСЛЯЕМ МАТЕМАТИКУ МИНУТ ДЛЯ АДМИНА ---
+          let totalMinutesSpent = 0;
+
+          userBookings.forEach(b => {
+            if (b.slot_time && b.slot_time.includes('-')) {
+              const parts = b.slot_time.split('-');
+              const [startH, startM] = parts[0].split(':').map(Number);
+              const [endH, endM] = parts[1].split(':').map(Number);
+
+              const startTotal = startH * 60 + startM;
+              let endTotal = endH * 60 + endM;
+
+              // Если интервал переходит через полночь
+              if (endTotal < startTotal) endTotal += 24 * 60;
+
+              // Складываем чистые минуты отдыха
+              totalMinutesSpent += (endTotal - startTotal);
+            }
+          });
 
           const tr = document.createElement('tr');
           tr.className = 'mon-row';
 
-          // Вычисляем общее время перерывов (пока просто выводим количество слотов, позже привяжем математику минут)
-          let totalSlotsCount = userBookings.length;
-
-          // Левая ячейка: Имя/ID оператора и кнопка полного сброса
+          // Левая ячейка: Имя оператора и живой счетчик суммарных минут отдыха
           let opCell = document.createElement('td');
           opCell.className = 'mon-cell-operator';
+          opCell.style.padding = '12px 14px';
           opCell.innerHTML = `
-            <div class="operator-id">
-              <button class="reset-row-btn" ... onclick="handleResetOperator('${operatorId}', '${channel}')">✕</button>
-              ${operatorId || 'Неизвестный'}
+            <div class="operator-id" style="display:flex; align-items:center; gap:8px;">
+              <button class="reset-row-btn" title="Сбросить оператора целиком" onclick="handleResetOperator('${operatorId}', '${channel}')">✕</button>
+              ${operatorId}
             </div>
-            <div class="operator-time-info">⏱ Занято слотов: ${totalSlotsCount}</div>
+            <div class="operator-time-info" style="color:var(--accent-neon); font-weight:700; margin-top:4px;">⏱️ Отгулял: ${totalMinutesSpent} мин</div>
           `;
           tr.appendChild(opCell);
 
           // Правая ячейка: Контейнер с неоновыми тегами интервалов
           let slotsCell = document.createElement('td');
           slotsCell.className = 'mon-cell-slots';
+          slotsCell.style.padding = '12px 14px';
 
           userBookings.forEach(b => {
             const tag = document.createElement('div');
             tag.className = 'adm-int-tag';
-            // При клике на конкретный тег админ сможет принудительно удалить именно этот перерыв
-            tag.innerHTML = `${b.slot_time} <span style="margin-left:5px; color:#ff4d4d; font-weight:700;">✕</span>`;
+            tag.innerHTML = `${b.slot_time} <span style="margin-left:6px; color:#ff4d4d; font-weight:700;">✕</span>`;
             tag.onclick = () => handleCancelSingleBooking(b.id, channel);
             slotsCell.appendChild(tag);
           });
