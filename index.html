@@ -256,15 +256,12 @@
       }
     });
 
-    // Функция авторизации пользователя (ОРИГИНАЛЬНАЯ ПРОВЕРКА С СОХРАНЕНИЕМ СЕССИИ)
+    // Функция авторизации пользователя (СИНТАКСИЧЕСКИ ИДЕАЛЬНАЯ ВЕРСИЯ)
     function handleLogin() {
       const uInput = document.getElementById('username').value.trim();
       const pInput = document.getElementById('password').value.trim();
       
-      // Страхуем проверку: если массив USERS_DB еще не успел подгрузиться из конфига
       const currentDb = (typeof USERS_DB !== 'undefined') ? USERS_DB : [];
-      
-      // Ищем пользователя строго по логину в базе аккаунтов воркспейса
       const user = currentDb.find(u => u.username === uInput && uInput !== "");
       
       if (!user || user.password !== pInput) {
@@ -272,25 +269,11 @@
         return;
       }
       
-      // СЕЙВ СЕССИИ: Записываем пользователя в память браузера для защиты от F5
+      // Сохраняем сессию в память браузера для защиты от F5
       localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
       
-      // Активируем экраны сайта
+      // Запускаем экраны сайта
       activateUserSession(user);
-    }
-
-        // Формируем чистый объект сессии (без пароля для безопасности)
-        const sessionUser = { username: user.username, role: user.role };
-
-        // Сохраняем сессию в память браузера для защиты от F5
-        localStorage.setItem('my_lunch_current_user', JSON.stringify(sessionUser));
-        
-        // Запускаем экраны сайта
-        activateUserSession(sessionUser);
-
-      } catch (err) {
-        showError('Ошибка авторизации: ' + err.message);
-      }
     }
 
     // Новая функция разделения экранов по ролям (вынесли для удобства авто-входа)
