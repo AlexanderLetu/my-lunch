@@ -240,24 +240,34 @@
     document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
     document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
    
-    // --- ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (АВТО-ВХОД БЕЗ СБОЕВ) ---
-    window.addEventListener('DOMContentLoaded', () => {
-      const savedUserText = localStorage.getItem('my_lunch_current_user');
-      if (savedUserText) {
-        try {
-          const savedUser = JSON.parse(savedUserText);
-          console.log(`🤖 Найдена активная сессия для пользователя: ${savedUser.username}`);
-          
-          // Железно активируем сессию напрямую из сохраненной памяти браузера
-          activateUserSession(savedUser);
-        } catch (e) {
-          localStorage.removeItem('my_lunch_current_user');
-        }
-      }
-    });
+// 1. АВТО-ВХОД: Проверка активной сессии при загрузке страницы (защита от F5)
+window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    // Спрашиваем у Supabase, залогинен ли кто-то прямо сейчас
+    const { data: { user }, error } = await db.auth.getUser();
 
+    if (user && user.user_metadata) {
+      console.log(`🤖 Найдена безопасная сессия для: ${user.user_metadata.username}`);
+      
+      const mappedUser = {
+        username: user.user_metadata.username,
+        role: user.user_metadata.role
+      };
+      
+      activateUserSession(mappedUser);
+    } else {
+      // Если сессии нет — показываем окно входа
+      document.getElementById('authBox').style.display = 'flex';
+    }
+  } catch (e) {
+    console.error("Ошибка авто-входа:", e);
+    document.getElementById('authBox').style.display = 'flex';
+  }
+});
+
+// 2. БЕЗОПАСНАЯ ФУНКЦИЯ АВТОРИЗАЦИИ ПО КНОПКЕ
 async function handleLogin() {
-  const uInput = document.getElementById('username').value.trim();
+  const uInput = document.getElementById('username').value.trim(); 
   const pInput = document.getElementById('password').value.trim();
   const errorBlock = document.getElementById('errorBlock');
 
@@ -267,67 +277,59 @@ async function handleLogin() {
   }
 
   try {
-    // Безопасный запрос: передаем заголовок 'x-username' для проверки RLS в базе
-    const { data: users, error } = await db
-      .from('users') 
-      .select('username, password, role')
-      .eq('username', uInput)
-      .setHeader('x-username', uInput); // Связка с созданным правилом безопасности!
+    // Умная склейка: если ввели просто "admin", код сам превратит в "admin@letu.space"
+    const finalEmail = uInput.includes('@') ? uInput : `${uInput}@letu.space`;
 
-    if (error) throw error;
+    // Вызываем встроенный метод Supabase Auth
+    const { data, error } = await db.auth.signInWithPassword({
+      email: finalEmail,
+      password: pInput
+    });
 
-    // Если база вернула пустой массив, значит логин неверный или скрыт защитой
-    if (!users || users.length === 0) {
+    if (error) {
+      // Если пароль неверный, Supabase вернет ошибку, и мы её покажем
       showError('Неверный логин или пароль');
       return;
     }
 
-    const user = users[0]; // Берем совпавшего пользователя
-
-    // Проверяем пароль
-    if (user.password !== pInput) {
-      showError('Неверный логин или пароль');
-      return;
-    }
-    
-    // Скрываем ошибки при успешном входе
+    const sessionUser = data.user;
     if (errorBlock) errorBlock.style.display = 'none';
 
-    // Сохраняем сессию в локальную память браузера для защиты от F5
-    localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
-    
-    console.log(`🤖 Успешная авторизация! Роль: ${user.role}`);
-    
-    // Передаем управление функции переключения экранов
-    activateUserSession(user);
+    // Вытаскиваем роль и юзернейм из тех самых метаданных, что мы записали через SQL
+    const mappedUser = {
+      username: sessionUser.user_metadata.username || 'Оператор',
+      role: sessionUser.user_metadata.role || 'operator'
+    };
+
+    console.log(`🔑 Вход успешен! Роль подтверждена сервером: ${mappedUser.role}`);
+    activateUserSession(mappedUser);
 
   } catch (err) {
-    console.error("Ошибка авторизации:", err);
+    console.error("Критическая ошибка авторизации:", err);
     showError('Ошибка подключения: ' + err.message);
   }
 }
 
-    // Новая функция разделения экранов по ролям (вынесли для удобства авто-входа)
-    function activateUserSession(user) {
-      window.currentUser = user;
-      document.getElementById('authBox').style.display = 'none';
+// 3. ФУНКЦИЯ АКТИВАЦИИ СЕССИИ И МГНОВЕННОГО РАЗДЕЛЕНИЯ ЭКРАНОВ
+function activateUserSession(user) {
+  window.currentUser = user;
+  document.getElementById('authBox').style.display = 'none';
 
-      if (user.role === 'admin') {
-        document.getElementById('admUserId').innerText = user.username;
-        document.getElementById('adminDashboard').style.display = 'flex';
-        
-        // Запускаем админ-панель
-        if (typeof fetchAndRenderAdminMonitor === 'function') {
-          fetchAndRenderAdminMonitor('HL');
-        }
-        if (typeof startAdminAutoRefresh === 'function') {
-          startAdminAutoRefresh();
-        }
-      } else {
-        // Если вошел обычный оператор — открываем выбор проекта
-        document.getElementById('channelBox').style.display = 'block';
-      }
+  if (user.role === 'admin') {
+    document.getElementById('admUserId').innerText = user.username;
+    document.getElementById('adminDashboard').style.display = 'flex';
+    
+    if (typeof fetchAndRenderAdminMonitor === 'function') {
+      fetchAndRenderAdminMonitor('HL');
     }
+    if (typeof startAdminAutoRefresh === 'function') {
+      startAdminAutoRefresh();
+    }
+  } else {
+    // Если зашел оператор — открываем ему выбор каналов
+    document.getElementById('channelBox').style.display = 'block';
+  }
+}
 
     function showError(text) {
       const errorBlock = document.getElementById('errorBlock');
@@ -1249,16 +1251,13 @@ async function handleLogin() {
       const utcTimestamp = new Date(targetResetMsk.getTime() - (3 * 60 * 60 * 1000));
       return utcTimestamp.toISOString();
     }
-    // Функция полного выхода из аккаунта с очисткой памяти
-    function handleLogoutApp() {
-      localStorage.removeItem('my_lunch_current_user'); // Стираем сессию
-      location.reload(); // Перезагружаем страницу на форму входа
-    }
-    // Функция полного выхода из аккаунта
-    function handleLogoutApp() {
-      localStorage.removeItem('my_lunch_current_user'); // Полностью стираем сессию
-      location.reload(); // Перезагружаем страницу на форму входа
-    }
+// 4. БЕЗОПАСНЫЙ ВЫХОД ИЗ СИСТЕМЫ (РАЗЛОГИН)
+async function handleLogoutApp() {
+  // Уничтожаем токены и сессию на серверах Supabase
+  await db.auth.signOut();
+  localStorage.removeItem('my_lunch_current_user'); // Чистим старые остатки памяти
+  location.reload(); 
+}
   </script>
 </body>
 </html>
