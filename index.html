@@ -692,10 +692,25 @@
       for (let line of lines) {
         let slot = line.trim();
         if (!slot) continue;
+
+        // Автоматическое добавление ведущих нулей, если админ ввел "9:35-9:50" вместо "09:35-09:50"
+        let parts = slot.split('-');
+        if (parts.length === 2) {
+          let start = parts[0].trim();
+          let end = parts[1].trim();
+          
+          if (start.length === 4) start = '0' + start; // "9:35" -> "09:35"
+          if (end.length === 4) end = '0' + end;     // "9:50" -> "09:50"
+          
+          slot = `${start}-${end}`;
+        }
+
+        // Проверка формата (теперь всегда будет проходить идеально)
         if (!regex.test(slot)) {
-          alert(`Неверный формат строки "${line}"! Используйте ЧЧ:ММ-ЧЧ:ММ`);
+          alert(`Неверный формат строки "${line}"! Используйте ЧЧ:ММ-ЧЧ:ММ (например, 09:35-09:50)`);
           return;
         }
+
         slotsToInsert.push({ slot_time: slot, type: type, channel: channel });
       }
 
