@@ -936,7 +936,7 @@
     // Математический расчет секунд и минут (Локально в браузере)
     function startCountdownTimerLogic(slotTime) {
       const times = slotTime.split('-');
-      const endTimeString = times[1]; // Берём время окончания (например, "10:20")
+      const endTimeString = times[1] ? times[1].trim() : times[0].trim(); 
       const [endHours, endMinutes] = endTimeString.split(':').map(Number);
       
       const overlay = document.getElementById('activeBreakOverlay');
