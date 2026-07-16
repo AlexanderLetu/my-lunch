@@ -893,29 +893,45 @@
       }
     }
 
-    // Функция удаления одного конкретного перерыва админом по клику на тег
+    // Исправленная функция удаления одного конкретного перерыва админом (только за сегодня)
     async function handleCancelSingleBooking(bookingId, channel) {
-      if (!confirm("Принудительно удалить этот временной слот из лога смены?")) return;
+      if (!confirm("Принудительно удалить этот временной слот из лога текущей смены?")) return;
       try {
-        const { error } = await db.from('bookings').delete().eq('id', bookingId);
+        // Вычисляем точку автосброса текущего отчетного дня
+        const resetTime = getResetTimestamp(channel);
+
+        // Удаляем строго по ID записи, но для железной страховки архива 
+        // добавляем условие, что запись создана после последнего автосброса
+        const { error } = await db
+          .from('bookings')
+          .delete()
+          .eq('id', bookingId)
+          .gte('created_at', resetTime); // Фильтр защиты вчерашних логов!
+
         if (error) throw error;
-        await fetchAndRenderAdminMonitor(channel); // Обновляем экран админа
+        await fetchAndRenderAdminMonitor(channel); // Мгновенно обновляем экран админа
       } catch (err) { alert("Не удалось удалить слот: " + err.message); }
     }
 
-    // Функция полного сброса всех перерывов конкретного оператора (нажатие на крестик у ID)
+    // Исправленная функция полного сброса оператора админом (только за сегодня)
     async function handleResetOperator(username, channel) {
-      if (!confirm(`Очистить все перерывы для оператора [${username}] в текущем канале?`)) return;
+      if (!confirm(`Очистить все перерывы для оператора [${username}] в текущей смене?`)) return;
       try {
-        const { error } = await db.from('bookings').delete().eq('username', username).eq('channel', channel);
+        // Вычисляем точку автосброса текущего отчетного дня
+        const resetTime = getResetTimestamp(channel);
+
+        // Сносим строки оператора строго в рамках текущей смены
+        const { error } = await db
+          .from('bookings')
+          .delete()
+          .eq('username', username)
+          .eq('channel', channel)
+          .gte('created_at', resetTime); // Фильтр защиты вчерашних логов!
+
         if (error) throw error;
-        await fetchAndRenderAdminMonitor(channel); // Обновляем экран админа
+        await fetchAndRenderAdminMonitor(channel); // Мгновенно обновляем экран админа
       } catch (err) { alert("Не удалось сбросить оператора: " + err.message); }
     }
-    // Глобальные переменные для хранения данных активного кликнутого слота
-    let activeActionSlotTime = '';
-    let activeActionSlotType = '';
-    let activeActionChannel = '';
 
     // Функция открытия модалки управления своим слотом (СТАБИЛЬНАЯ ВЕРСИЯ)
     function openCancelBreakModal(slotTime, type, channel) {
