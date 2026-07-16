@@ -56,7 +56,7 @@
         <!-- Блок кнопок в правом углу (Тема + Выйти) -->
         <div style="display: flex; gap: 10px; align-items: center;">
           <button class="theme-toggle-inline" style="background: var(--input-bg); border: 1px solid var(--border-sea); color: var(--text-white); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; height: 32px; transition: all 0.2s;" onmouseover="this.style.background='var(--border-sea)'" onmouseout="this.style.background='var(--input-bg)'" onclick="toggleTheme()">🌓 Тема</button>
-          <button class="admin-logout-btn" style="margin-top: 0; height: 32px; padding: 0 16px;" onclick="location.reload()">ВЫЙТИ</button>
+          <button class="admin-logout-btn" style="margin-top: 0; height: 32px; padding: 0 16px;" onclick="handleLogoutApp()">ВЫЙТИ</button>
         </div>
       </div>
 
@@ -239,52 +239,64 @@
 
     document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
     document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
+    // --- ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (АВТО-ВХОД) ---
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedUserText = localStorage.getItem('my_lunch_current_user');
+      if (savedUserText) {
+        try {
+          const savedUser = JSON.parse(savedUserText);
+          console.log(`🤖 Найдена активная сессия для пользователя: ${savedUser.username}`);
+          
+          const userExists = USERS_DB.find(u => u.username === savedUser.username && u.role === savedUser.role);
+          if (userExists) {
+            activateUserSession(userExists);
+          } else {
+            localStorage.removeItem('my_lunch_current_user');
+          }
+        } catch (e) {
+          localStorage.removeItem('my_lunch_current_user');
+        }
+      }
+    });
 
-    async function handleLogin() {
-      const errorBlock = document.getElementById('errorBlock');
-      errorBlock.style.display = 'none';
-      const inputUser = document.getElementById('username').value.trim();
-      const inputPass = document.getElementById('password').value.trim();
-
-      if (!inputUser || !inputPass) {
-        showError("Заполните все поля логина и пароля!");
+    // Функция авторизации пользователя
+    function handleLogin() {
+      const uInput = document.getElementById('usernameInput').value.trim();
+      const pInput = document.getElementById('passwordInput').value.trim();
+      
+      const user = USERS_DB.find(u => u.username === uInput && uInput !== "");
+      
+      if (!user || user.password !== pInput) {
+        showError('Неверный логин или пароль');
         return;
       }
-      try {
-        // Вызываем созданную нами безопасную функцию RPC на сервере
-        const { data: user, error } = await db
-          .rpc('check_user_login', { input_user: inputUser, input_pass: inputPass })
-          .maybeSingle();
+      
+      // СЕЙВ СЕССИИ: Записываем пользователя в память браузера, чтобы F5 его не выкидывало!
+      localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
+      
+      // Активируем нужный экран в зависимости от роли
+      activateUserSession(user);
+    }
 
-        if (error) throw error;
-        if (!user) {
-          showError("Неверный логин или пароль!");
-          return;
-        }
+    // Новая функция разделения экранов по ролям (вынесли для удобства авто-входа)
+    function activateUserSession(user) {
+      window.currentUser = user;
+      document.getElementById('authBox').style.display = 'none';
 
-        console.log(`Успешный вход! Роль: ${user.role}. Проект: ${currentProject}`);
+      if (user.role === 'admin') {
+        document.getElementById('admUserId').innerText = user.username;
+        document.getElementById('adminDashboard').style.display = 'flex';
         
-        // Надежно прячем окно входа для всех типов пользователей
-        document.getElementById('authBox').style.display = 'none';
-
-        // Если вошел администратор — открываем админку
-        if (user.role === 'admin') {
-          document.getElementById('admUserId').innerText = user.username;
-          document.getElementById('adminDashboard').style.display = 'flex';
-          
+        // Запускаем админ-панель
+        if (typeof fetchAndRenderAdminMonitor === 'function') {
           fetchAndRenderAdminMonitor('HL');
-          startAdminAutoRefresh(); // АКТИВАЦИЯ: включаем автообновление раз в 30 сек
-          return;
         }
-
-        // Если вошел обычный оператор — запускаем проект перерывов или ИД
-        if (currentProject === 'breaks') { 
-          startBreaksProject(user); 
-        } else { 
-          startIdProject(user); 
+        if (typeof startAdminAutoRefresh === 'function') {
+          startAdminAutoRefresh();
         }
-      } catch (err) { 
-        showError("Ошибка подключения: " + err.message); 
+      } else {
+        // Если вошел обычный оператор — открываем выбор проекта
+        document.getElementById('channelBox').style.display = 'block';
       }
     }
 
@@ -328,7 +340,7 @@
             </div>
             <div style="display: flex; gap: 10px; align-items: center;">
               <button class="theme-toggle-inline" onclick="toggleTheme()">🌓 Тема</button>
-              <button class="grid-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+              <button class="grid-logout-btn" onclick="handleLogoutApp()">ВЫЙТИ</button>
             </div>
           </div>
 
@@ -1207,6 +1219,11 @@
       // Вычитаем 3 часа (разница МСК и UTC), чтобы база данных поняла запрос правильно
       const utcTimestamp = new Date(targetResetMsk.getTime() - (3 * 60 * 60 * 1000));
       return utcTimestamp.toISOString();
+    }
+    // Функция полного выхода из аккаунта с очисткой памяти
+    function handleLogoutApp() {
+      localStorage.removeItem('my_lunch_current_user'); // Стираем сессию
+      location.reload(); // Перезагружаем страницу на форму входа
     }
 
   </script>
