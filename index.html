@@ -259,10 +259,11 @@
       }
     });
 
-    // Функция авторизации пользователя
+    // Функция авторизации пользователя (ИСПРАВЛЕННАЯ СТАБИЛЬНАЯ ВЕРСИЯ)
     function handleLogin() {
-      const uInput = document.getElementById('usernameInput').value.trim();
-      const pInput = document.getElementById('passwordInput').value.trim();
+      // Вернули твои оригинальные ID элементов: 'username' и 'password'
+      const uInput = document.getElementById('username').value.trim();
+      const pInput = document.getElementById('password').value.trim();
       
       const user = USERS_DB.find(u => u.username === uInput && uInput !== "");
       
@@ -271,7 +272,7 @@
         return;
       }
       
-      // СЕЙВ СЕССИИ: Записываем пользователя в память браузера, чтобы F5 его не выкидывало!
+      // СЕЙВ СЕССИИ: Записываем пользователя в память браузера
       localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
       
       // Активируем нужный экран в зависимости от роли
