@@ -240,13 +240,15 @@
     document.getElementById('username').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
     document.getElementById('password').addEventListener('keypress', e => { if(e.key === 'Enter') handleLogin(); });
    
-    // --- ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (АВТО-ВХОД) ---
+    // --- ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (АВТО-ВХОД БЕЗ СБОЕВ) ---
     window.addEventListener('DOMContentLoaded', () => {
       const savedUserText = localStorage.getItem('my_lunch_current_user');
       if (savedUserText) {
         try {
           const savedUser = JSON.parse(savedUserText);
           console.log(`🤖 Найдена активная сессия для пользователя: ${savedUser.username}`);
+          
+          // Железно активируем сессию напрямую из сохраненной памяти браузера
           activateUserSession(savedUser);
         } catch (e) {
           localStorage.removeItem('my_lunch_current_user');
@@ -254,31 +256,28 @@
       }
     });
 
-    // Полностью автономная функция авторизации через Supabase (без использования USERS_DB)
-    async function handleLogin() {
+    // Функция авторизации пользователя (ОРИГИНАЛЬНАЯ ПРОВЕРКА С СОХРАНЕНИЕМ СЕССИИ)
+    function handleLogin() {
       const uInput = document.getElementById('username').value.trim();
       const pInput = document.getElementById('password').value.trim();
-
-      if (!uInput || !pInput) {
-        showError('Заполните все поля!');
+      
+      // Страхуем проверку: если массив USERS_DB еще не успел подгрузиться из конфига
+      const currentDb = (typeof USERS_DB !== 'undefined') ? USERS_DB : [];
+      
+      // Ищем пользователя строго по логину в базе аккаунтов воркспейса
+      const user = currentDb.find(u => u.username === uInput && uInput !== "");
+      
+      if (!user || user.password !== pInput) {
+        showError('Неверный логин или пароль');
         return;
       }
-
-      try {
-        // Запрашиваем пользователя напрямую из таблицы users в Supabase
-        const { data: user, error } = await db
-          .from('users')
-          .select('username, password, role')
-          .eq('username', uInput)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        // Если такого юзера нет или пароль не совпал
-        if (!user || user.password !== pInput) {
-          showError('Неверный логин или пароль');
-          return;
-        }
+      
+      // СЕЙВ СЕССИИ: Записываем пользователя в память браузера для защиты от F5
+      localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
+      
+      // Активируем экраны сайта
+      activateUserSession(user);
+    }
 
         // Формируем чистый объект сессии (без пароля для безопасности)
         const sessionUser = { username: user.username, role: user.role };
@@ -1241,7 +1240,11 @@
       localStorage.removeItem('my_lunch_current_user'); // Стираем сессию
       location.reload(); // Перезагружаем страницу на форму входа
     }
-
+    // Функция полного выхода из аккаунта
+    function handleLogoutApp() {
+      localStorage.removeItem('my_lunch_current_user'); // Полностью стираем сессию
+      location.reload(); // Перезагружаем страницу на форму входа
+    }
   </script>
 </body>
 </html>
