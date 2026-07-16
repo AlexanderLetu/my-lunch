@@ -431,12 +431,12 @@
           return;
         }
 
-              // 3. Распределяем интервалы по колонкам с учётом их живого статуса занятости
+        // 3. Распределяем интервалы по колонкам с учётом их живого статуса занятости
         slots.forEach(slot => {
           const btn = document.createElement('button');
           btn.innerText = slot.slot_time;
 
-          // Проверяем, занят ли этот интервал кем-то в базе
+          // Проверяем, есть ли этот временной интервал в нашей карте занятости
           const existingBooking = bookingsMap[slot.slot_time];
 
           if (!existingBooking) {
@@ -445,27 +445,32 @@
             btn.onclick = () => handleSlotBooking(slot.slot_time, channel, btn);
           } 
           else if (existingBooking.username === window.currentUser.username) {
-            // Сценарий Б: Слот забронирован ТЕКУЩИМ вошедшим оператором
-            btn.className = 'slot-item-btn my-booking';
-            btn.innerHTML = `${slot.slot_time} <span class="busy-by" style="background:var(--accent-neon); color:#0a1128;">МОЙ</span>`;
+            // Сценарий Б: Слот принадлежит ТЕКУЩЕМУ оператору
             
-            // --- ЭТАП 2: КЛОНИРУЕМ ТЕГ НАВЕРХ В ШАПКУ («МОЙ ПЛАН НА ДЕНЬ») ---
-            const planContainer = document.getElementById('operatorMyPlan');
-            if (planContainer) {
-              // Если это первая загрузка и там горит пустота — очистим контейнер
-              if (planContainer.innerHTML.includes('<!--')) planContainer.innerHTML = '';
+            if (existingBooking.status === 'COMPLETED') {
+              // НОВАЯ ФИЧА: Слот уже отгулян этим оператором — НАМЕРТВО БЛОКИРУЕМ
+              btn.className = 'slot-item-btn my-completed';
+              btn.innerHTML = `${slot.slot_time} <span class="busy-by" style="background:#222; color:#777;">ОТГУЛЯН</span>`;
+              btn.onclick = null; // Полностью отключаем кликабельность кнопки
               
-              const planTag = document.createElement('div');
-              planTag.className = 'user-plan-tag';
-              planTag.innerText = slot.slot_time;
+            } else {
+              // Слот просто забронирован на будущее или активен прямо сейчас
+              btn.className = 'slot-item-btn my-booking';
+              btn.innerHTML = `${slot.slot_time} <span class="busy-by" style="background:var(--accent-neon); color:#0a1128;">МОЙ</span>`;
+              btn.onclick = () => openCancelBreakModal(slot.slot_time, slot.type, channel);
               
-              // Привязываем вызов модалки отмены перерыва по клику на тег в шапке
-              planTag.onclick = () => openCancelBreakModal(slot.slot_time, slot.type, channel);
-              planContainer.appendChild(planTag);
+              // --- КЛОНИРУЕМ ТЕГ НАВЕРХ В ШАПКУ («МОЙ ПЛАН НА ДЕНЬ») ---
+              const planContainer = document.getElementById('operatorMyPlan');
+              if (planContainer) {
+                if (planContainer.innerHTML.includes('<!--')) planContainer.innerHTML = '';
+                
+                const planTag = document.createElement('div');
+                planTag.className = 'user-plan-tag';
+                planTag.innerText = slot.slot_time;
+                planTag.onclick = () => openCancelBreakModal(slot.slot_time, slot.type, channel);
+                planContainer.appendChild(planTag);
+              }
             }
-
-            // По клику на саму большую кнопку в сетке тоже будем открывать это же окно отмены
-            btn.onclick = () => openCancelBreakModal(slot.slot_time, slot.type, channel);
           } 
           else {
             // Сценарий В: Слот занят кем-то другим
