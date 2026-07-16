@@ -256,25 +256,47 @@
       }
     });
 
-    // Функция авторизации пользователя (СИНТАКСИЧЕСКИ ИДЕАЛЬНАЯ ВЕРСИЯ)
-    function handleLogin() {
-      const uInput = document.getElementById('username').value.trim();
-      const pInput = document.getElementById('password').value.trim();
-      
-      const currentDb = (typeof USERS_DB !== 'undefined') ? USERS_DB : [];
-      const user = currentDb.find(u => u.username === uInput && uInput !== "");
-      
-      if (!user || user.password !== pInput) {
-        showError('Неверный логин или пароль');
-        return;
-      }
-      
-      // Сохраняем сессию в память браузера для защиты от F5
-      localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
-      
-      // Запускаем экраны сайта
-      activateUserSession(user);
+async function handleLogin() {
+  const uInput = document.getElementById('username').value.trim();
+  const pInput = document.getElementById('password').value.trim();
+  const errorBlock = document.getElementById('errorBlock');
+  
+  if (!uInput || !pInput) {
+    showError('Заполните все поля!');
+    return;
+  }
+
+  try {
+    // Делаем реальный запрос в Supabase в таблицу пользователей
+    // (Убедитесь, что имя таблицы совпадает с вашей структурой, например 'users' или 'profiles')
+    const { data: user, error } = await db
+      .from('users') 
+      .select('username, password, role')
+      .eq('username', uInput)
+      .maybeSingle(); // Возвращает один объект или null
+
+    if (error) throw error;
+
+    // Проверяем, существует ли пользователь и совпадает ли пароль
+    if (!user || user.password !== pInput) {
+      showError('Неверный логин или пароль');
+      return;
     }
+    
+    // Скрываем ошибку при успехе
+    if (errorBlock) errorBlock.style.display = 'none';
+
+    // Сохраняем сессию в память браузера для защиты от F5
+    localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
+    
+    // Запускаем экраны сайта в зависимости от роли (admin или operator)
+    activateUserSession(user);
+
+  } catch (err) {
+    console.error("Ошибка при авторизации:", err);
+    showError('Ошибка сети или базы данных: ' + err.message);
+  }
+}
 
     // Новая функция разделения экранов по ролям (вынесли для удобства авто-входа)
     function activateUserSession(user) {
