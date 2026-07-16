@@ -13,9 +13,6 @@
 </head>
 <body>
 
-  <!-- Кнопка переключения дневной/ночной темы -->
-  <button class="theme-toggle" onclick="toggleTheme()">🌓 Сменить тему</button>
-
   <!-- Вкладки переключения проектов сверху справа -->
   <div class="project-tabs">
     <button class="tab-btn active" onclick="switchProject('breaks')">Перерывы</button>
@@ -50,11 +47,17 @@
     
     <!-- Шапка управления админа -->
     <div class="admin-card">
-      <div class="admin-header-info">
+      <div class="admin-header-info" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
         <div class="admin-user-badge">ID: <span id="admUserId">admin</span> | <span style="color:#ff007f;">ADMIN: ПАНЕЛЬ</span></div>
-        <!-- Вывод текущей даты -->
-        <div style="font-weight: 700; letter-spacing: 1px;" id="adminCurrentDate">15.07.2026</div>
-        <button class="admin-logout-btn" onclick="location.reload()">ВЫЙТИ</button>
+        
+        <!-- Вывод текущей даты по центру -->
+        <div style="font-weight: 700; letter-spacing: 1px; color: var(--text-white);" id="adminCurrentDate">15.07.2026</div>
+        
+        <!-- Блок кнопок в правом углу (Тема + Выйти) -->
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="theme-toggle-inline" style="background: var(--input-bg); border: 1px solid var(--border-sea); color: var(--text-white); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; height: 32px; transition: all 0.2s;" onmouseover="this.style.background='var(--border-sea)'" onmouseout="this.style.background='var(--input-bg)'" onclick="toggleTheme()">🌓 Тема</button>
+          <button class="admin-logout-btn" style="margin-top: 0; height: 32px; padding: 0 16px;" onclick="location.reload()">ВЫЙТИ</button>
+        </div>
       </div>
 
       <!-- Вкладки мониторинга смен с кнопками-карандашами для редактирования слотов -->
