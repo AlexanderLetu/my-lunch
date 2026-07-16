@@ -269,8 +269,8 @@
           document.getElementById('admUserId').innerText = user.username;
           document.getElementById('adminDashboard').style.display = 'flex';
           
-          // Принудительно запускаем монитор Линии на старте
           fetchAndRenderAdminMonitor('HL');
+          startAdminAutoRefresh(); // АКТИВАЦИЯ: включаем автообновление раз в 30 сек
           return;
         }
 
@@ -845,7 +845,20 @@
           userBookings.forEach(b => {
             const tag = document.createElement('div');
             tag.className = 'adm-int-tag';
-            tag.innerHTML = `${b.slot_time} <span style="margin-left:6px; color:#ff4d4d; font-weight:700;">✕</span>`;
+            
+            // Проверяем статус перерыва из базы данных и красим тег
+            if (b.status === 'ACTIVE') {
+              tag.className += ' status-active'; // Навешиваем пульсацию
+              tag.title = "Оператор сейчас на перерыве!";
+            } else if (b.status === 'COMPLETED') {
+              tag.className += ' status-completed'; // Навешиваем перечёркивание
+              tag.title = "Перерыв завершён";
+            }
+
+            // Рендерим текст времени и крестик принудительного удаления
+            tag.innerHTML = `${b.slot_time} <span style="margin-left:6px; color:#ff4d4d; font-weight:700; cursor:pointer;" title="Принудительно удалить">✕</span>`;
+            
+            // По клику на тег админ всё ещё может удалить бронь, если нужно почистить лог
             tag.onclick = () => handleCancelSingleBooking(b.id, channel);
             slotsCell.appendChild(tag);
           });
@@ -940,7 +953,31 @@
         alert("Не удалось освободить слот: " + err.message);
       }
     }
-    
+        // Глобальная переменная для хранения таймера автообновления админки
+    let adminRefreshIntervalId = null;
+
+    // Функция, которая запускает тиканье автообновления раз в 30 секунд
+    function startAdminAutoRefresh() {
+      // Если таймер уже запущен — очистим его, чтобы не дублировать запросы
+      if (adminRefreshIntervalId) clearInterval(adminRefreshIntervalId);
+
+      adminRefreshIntervalId = setInterval(() => {
+        // Находим, какая вкладка монитора сейчас горит активной у админа
+        const activeTabButton = document.querySelector('.mon-tab.active');
+        if (activeTabButton) {
+          // Вытаскиваем тип канала (HL, LIVE или NIGHT) из её кода
+          let currentChannel = 'HL';
+          if (activeTabButton.innerText.includes('ЧАТ')) {
+            currentChannel = activeTabButton.onclick.toString().includes('NIGHT') ? 'NIGHT' : 'LIVE';
+          }
+          
+          console.log(`⏰ Автообновление: запрашиваю свежие данные для канала [${currentChannel}]...`);
+          // Вызываем тихую перезагрузку таблицы без мигания экрана
+          fetchAndRenderAdminMonitor(currentChannel);
+        }
+      }, 30000); // 30000 миллисекунд = 30 секунд
+    }
+
     let countdownIntervalId = null;
 
     // Кнопка "ДА" — фиксирует точное время старта перерыва в базу
