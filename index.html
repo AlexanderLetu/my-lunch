@@ -256,28 +256,23 @@
       }
     });
 
-    // Функция авторизации пользователя
+    // Функция авторизации пользователя (ФИНАЛЬНАЯ РАБОЧАЯ ВЕРСИЯ)
     function handleLogin() {
       const uInput = document.getElementById('username').value.trim();
       const pInput = document.getElementById('password').value.trim();
       
-      // Находим пользователя по логину и паролю в глобальном объекте окон браузера
-      const user = (typeof USERS_DB !== 'undefined' ? USERS_DB : []).find(u => u.username === uInput && uInput !== "");
-      
-      // Страхуем проверку, если массив скрыт защитой воркспейса
-      if (!user && uInput === "admin" && pInput === "admin") {
-        const adminFallback = { username: "admin", role: "admin" };
-        localStorage.setItem('my_lunch_current_user', JSON.stringify(adminFallback));
-        activateUserSession(adminFallback);
-        return;
-      }
+      // Ищем строго по массиву USERS_DB (как в твоем оригинальном рабочем коде)
+      const user = USERS_DB.find(u => u.username === uInput && uInput !== "");
       
       if (!user || user.password !== pInput) {
         showError('Неверный логин или пароль');
         return;
       }
       
+      // Записываем сессию в память браузера для защиты от перезагрузки страницы (F5)
       localStorage.setItem('my_lunch_current_user', JSON.stringify(user));
+      
+      // Активируем экраны
       activateUserSession(user);
     }
 
