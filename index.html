@@ -940,25 +940,6 @@
         }
       }, 1000);
     }
-    // Функция автоматического завершения перерыва, когда таймер дошел до 00:00
-    async function autoCompleteActiveBreak() {
-      if (countdownIntervalId) clearInterval(countdownIntervalId);
-      const overlay = document.getElementById('activeBreakOverlay');
-      if (overlay) overlay.style.display = 'none';
-      
-      try {
-        await db
-          .from('bookings')
-          .update({ status: 'COMPLETED' })
-          .eq('slot_time', activeActionSlotTime)
-          .eq('username', window.currentUser.username);
-
-        alert("⏰ Время вашего перерыва истекло! Возвращайтесь к работе.");
-        await renderTimeGrid(activeActionChannel);
-      } catch (err) { 
-        console.error("Ошибка автозавершения: ", err); 
-      }
-    }
 
     // Функция ручного досрочного завершения перерыва по кнопке "ЗАВЕРШИТЬ"
     async function handleEarlyCompleteBreak() {
@@ -980,15 +961,21 @@
         alert("Не удалось завершить перерыв: " + err.message); 
       }
     }
-
-
-    // Функция, которая срабатывает, когда таймер дошел до 00:00
+    // Функция автоматического завершения перерыва (когда таймер дошел до 00:00)
     async function autoCompleteActiveBreak() {
       if (countdownIntervalId) clearInterval(countdownIntervalId);
-      document.getElementById('activeBreakOverlay').style.display = 'none';
+      
+      // ЗАЩИТА: проверяем, существует ли фон таймера, перед тем как скрыть его
+      const overlay = document.getElementById('activeBreakOverlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+      } else {
+        // Если фон был затерт командой innerHTML — просто принудительно перезагрузим страницу для очистки!
+        location.reload();
+        return;
+      }
       
       try {
-        // Меняем статус в базе на COMPLETED (перерыв успешно завершен)
         await db
           .from('bookings')
           .update({ status: 'COMPLETED' })
@@ -996,19 +983,29 @@
           .eq('username', window.currentUser.username);
 
         alert("⏰ Время вашего перерыва истекло! Возвращайтесь к работе.");
-        await renderTimeGrid(activeActionChannel); // Перерисовываем сетку
-      } catch (err) { console.error(err); }
+        await renderTimeGrid(activeActionChannel);
+      } catch (err) { 
+        console.error("Ошибка автозавершения: ", err); 
+      }
     }
 
-    // Функция досрочного завершения перерыва по кнопке "ЗАВЕРШИТЬ"
+    // Функция ручного досрочного завершения перерыва по кнопке "ЗАВЕРШЕР"
     async function handleEarlyCompleteBreak() {
       if (!confirm("Вы действительно хотите завершить перерыв досрочно и вернуться на линию?")) return;
       
       if (countdownIntervalId) clearInterval(countdownIntervalId);
-      document.getElementById('activeBreakOverlay').style.display = 'none';
+      
+      // ЗАЩИТА: проверяем, существует ли фон таймера
+      const overlay = document.getElementById('activeBreakOverlay');
+      if (overlay) {
+        overlay.style.display = 'none';
+      } else {
+        // Если фон затерт — чистим страницу через перезагрузку
+        location.reload();
+        return;
+      }
 
       try {
-        // Ставим статус COMPLETED в лог Supabase
         await db
           .from('bookings')
           .update({ status: 'COMPLETED' })
@@ -1016,8 +1013,11 @@
           .eq('username', window.currentUser.username);
 
         await renderTimeGrid(activeActionChannel);
-      } catch (err) { alert(err.message); }
+      } catch (err) { 
+        alert("Не удалось завершить перерыв: " + err.message); 
+      }
     }
+
   </script>
 </body>
 </html>
